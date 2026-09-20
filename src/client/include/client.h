@@ -7,8 +7,9 @@
 
 #include "SoapySDR/Device.hpp"
 #include "SoapySDR/Registry.hpp"
-
-
+#include <vector>
+#include "SoapySDR/Modules.hpp"
+#include <memory>
 
 namespace sdrcomms {
     class Client {
@@ -18,13 +19,16 @@ namespace sdrcomms {
         void ListDevices();
         bool Connect();
 
+        void PrintSoapySDRInfo();
+
+        void PrintDeviceInfo();
+
     private:
         std::string serverUrl;
         std::string driverName;
-        static bool isRegistered;
-        static bool errState;
         bool isConnected;
 
+        std::shared_ptr<SoapySDR::Device> device;
     };
 }
 
