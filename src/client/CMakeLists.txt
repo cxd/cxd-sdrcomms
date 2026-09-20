@@ -52,7 +52,11 @@ FetchContent_MakeAvailable(soapyremote)
 
 
 add_library(client_static STATIC include/client.h
-        client.cpp)
+        client.cpp
+        IQBlock.cpp
+        include/IQBlock.h
+        ReceiveQueue.cpp
+        include/ReceiveQueue.h)
 
 
 # 1. Manually pull the source directory variable from the fetched SoapySDR configuration
@@ -75,6 +79,8 @@ add_dependencies(client_static remoteSupport)
 set_target_properties(client_static PROPERTIES
         BUILD_RPATH "${soapysdr_BINARY_DIR}/lib"
 )
+
+
 
 # Include the folder so your #include statements can locate the headers
 #target_include_directories(client_static PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty/SDL2_gfx")

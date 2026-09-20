@@ -114,6 +114,33 @@ namespace sdrcomms {
     }
 
 
-    void Client::ListDevices() {
+    void Client::StreamData(std::function<void(const IQBlock&)> callback) {
+        if (isStreaming.load(std::memory_order_relaxed)) {
+            return;
+        }
+        if (device == nullptr) {
+            return;
+        }
+        size_t mtu ; //= device->getStreamMTU();
+        // samples per second
+        receiveQueue = std::make_shared<ReceiveQueue>(samples_per_second*2, mtu);
+
+        //size_t mtu = device->getStreamMTU();
+
+        while (isStreaming.load(std::memory_order_relaxed)) {
+            IQBlock block;
+            //block.resize(mtu);
+            //device->readStream(stream, block.data(), mtu, flags, timeNs);
+
+        }
     }
+
+    void Client::SetCenterFrequency(double frequency) {
+
+    }
+
+    void Client::StopStreaming() {
+        isStreaming.store(false, std::memory_order_relaxed);
+    }
+
 }

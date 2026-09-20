@@ -10,25 +10,42 @@
 #include <vector>
 #include "SoapySDR/Modules.hpp"
 #include <memory>
+#include <functional>
+#include <atomic>
+#include "IQBlock.h"
+#include "ReceiveQueue.h"
 
 namespace sdrcomms {
     class Client {
     public:
         Client(std::string serverUrl, std::string driverName);
 
-        void ListDevices();
         bool Connect();
 
         void PrintSoapySDRInfo();
 
         void PrintDeviceInfo();
 
+        void StreamData(std::function<void(const IQBlock&)> callback);
+
+        void SetCenterFrequency(double frequency);
+
+        void StopStreaming();
+
     private:
         std::string serverUrl;
         std::string driverName;
         bool isConnected;
 
+        // number of samples per second
+        size_t samples_per_second = 2.5e6;
+
         std::shared_ptr<SoapySDR::Device> device;
+        std::shared_ptr<ReceiveQueue> receiveQueue;
+        std::atomic<bool> isStreaming;
+        std::atomic<double> centerFrequency;
+
+
     };
 }
 
