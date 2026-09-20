@@ -5,9 +5,25 @@
 #ifndef SDRCOMMS_CLIENT_H
 #define SDRCOMMS_CLIENT_H
 
-namespace sdrcomms {
-    class client {
+#include "SoapySDR/Device.hpp"
+#include "SoapySDR/Registry.hpp"
 
+
+
+namespace sdrcomms {
+    class Client {
+    public:
+        Client(std::string serverUrl, std::string driverName);
+
+        void ListDevices();
+        bool Connect();
+
+    private:
+        std::string serverUrl;
+        std::string driverName;
+        static bool isRegistered;
+        static bool errState;
+        bool isConnected;
 
     };
 }

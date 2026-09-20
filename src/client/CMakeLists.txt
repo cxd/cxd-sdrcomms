@@ -5,39 +5,76 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-# --- Define standard search hints for macOS (Homebrew) and Linux ---
-set(SDR_INCLUDE_HINTS
-        /opt/homebrew/include
-        /usr/include
-        /usr/local/include
+
+include(FetchContent)
+
+
+# 2. Fetch SoapySDR Core
+FetchContent_Declare(
+        soapysdr
+        GIT_REPOSITORY https://github.com/pothosware/SoapySDR.git
+        GIT_TAG        master
 )
 
-set(SDR_LIB_HINTS
-        /opt/homebrew/lib
-        /usr/lib
-        /usr/lib/x86_64-linux-gnu
-        /usr/lib/aarch64-linux-gnu
-        /usr/local/lib
-)
-
-
-# --- 1. Find SoapySDR Core ---
-find_path(SOAPY_SDR_INCLUDE_DIR NAMES SoapySDR/Version.h HINTS ${SDR_INCLUDE_HINTS})
-find_library(SOAPY_SDR_LIBRARY NAMES SoapySDR HINTS ${SDR_LIB_HINTS})
-
-# --- 2. Find SoapyRemote Client Library ---
-find_path(SOAPY_REMOTE_INCLUDE_DIR NAMES SoapyRemoteDefs.hpp HINTS ${SDR_INCLUDE_HINTS})
-find_library(SOAPY_REMOTE_LIBRARY NAMES SoapyRemote HINTS ${SDR_LIB_HINTS})
-
-# --- Safety Verification ---
-if(NOT SOAPY_SDR_LIBRARY OR NOT SOAPY_REMOTE_LIBRARY)
-    message(FATAL_ERROR "Could not find SoapySDR or SoapyRemote! Please make sure the dev packages are installed on your system.")
+# CRITICAL FIX A: Inform the build system that SoapySDR is active inside this source tree.
+# This prevents it from escaping out to /opt/homebrew configurations.
+FetchContent_GetProperties(soapysdr)
+if(NOT soapysdr_POPULATED)
+    FetchContent_Populate(soapysdr)
+    set(SOAPY_SDR_IN_TREE_SOURCE_DIR "${soapysdr_SOURCE_DIR}" CACHE INTERNAL "")
+    add_subdirectory(${soapysdr_SOURCE_DIR} ${soapysdr_BINARY_DIR})
 endif()
+
+# CRITICAL FIX B: Tell subsequent dependencies (like SoapyRemote) to never check
+# global paths for SoapySDR because we have an active CMake alias target.
+set(SoapySDR_DIR "${soapysdr_BINARY_DIR}" CACHE PATH "Force local SoapySDR path" FORCE)
+
+# Disable building apps/tests to keep your build clean and fast
+set(ENABLE_APPS OFF CACHE INTERNAL "")
+set(ENABLE_TESTS OFF CACHE INTERNAL "")
+FetchContent_MakeAvailable(soapysdr)
+
+# 3. Fetch SoapyPluto Plugin
+FetchContent_Declare(
+        soapyremote
+        GIT_REPOSITORY https://github.com/pothosware/SoapyRemote.git
+        GIT_TAG        master
+)
+
+
+# Tell the remote build explicitly to look AT the fetched binary directory first,
+# and tell find_package to ignore global paths (/opt/homebrew or /usr) completely.
+set(SoapySDR_DIR "${soapysdr_BINARY_DIR}" CACHE PATH "" FORCE)
+set(CMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY ON)
+set(CMAKE_FIND_PACKAGE_NO_SYSTEM_PACKAGE_REGISTRY ON)
+
+FetchContent_MakeAvailable(soapyremote)
 
 
 add_library(client_static STATIC include/client.h
         client.cpp)
 
+
+# 1. Manually pull the source directory variable from the fetched SoapySDR configuration
+FetchContent_GetProperties(soapysdr)
+if(soapysdr_POPULATED)
+    # 2. Force export the raw header folder path downstream.
+    # Use PUBLIC so it applies to both this library AND your main application target.
+    target_include_directories(client_static PUBLIC
+            "${soapysdr_SOURCE_DIR}/include"
+    )
+endif()
+
+target_link_libraries(client_static PRIVATE SoapySDR)
+
+# 2. Tell CMake to build the remoteSupport plugin whenever my_radio_app is built
+add_dependencies(client_static remoteSupport)
+
+# 3. Automatically inject runtime search paths for your IDE/Debugger
+# This embeds the built SoapySDR library directory into your executable path info
+set_target_properties(client_static PROPERTIES
+        BUILD_RPATH "${soapysdr_BINARY_DIR}/lib"
+)
 
 # Include the folder so your #include statements can locate the headers
 #target_include_directories(client_static PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty/SDL2_gfx")
@@ -58,17 +95,6 @@ else()
 
 endif()
 
-# Map headers dynamically depending on where they were discovered
-target_include_directories(client_static PRIVATE
-        ${SOAPY_SDR_INCLUDE_DIR}
-        ${SOAPY_REMOTE_INCLUDE_DIR}
-)
-
-# Link against the discovered native system binaries (.dylib or .so)
-target_link_libraries(client_static PRIVATE
-        ${SOAPY_SDR_LIBRARY}
-        ${SOAPY_REMOTE_LIBRARY}
-)
 
 
 # ==============================================================================
