@@ -12,13 +12,17 @@
 #include <memory>
 #include <functional>
 #include <atomic>
+#include <thread>
+
 #include "IQBlock.h"
 #include "ReceiveQueue.h"
+#include "constants.h"
+#include "SampleProcessor.h"
 
 namespace sdrcomms {
     class Client {
     public:
-        Client(std::string serverUrl, std::string driverName);
+        Client(std::string serverUrl, std::string driverName, size_t queueDepth);
 
         bool Connect();
 
@@ -26,26 +30,100 @@ namespace sdrcomms {
 
         void PrintDeviceInfo();
 
-        void StreamData(std::function<void(const IQBlock&)> callback);
+        /**
+         * start streaming
+         * @param callback
+         * @return
+         * true on success false otherwise.
+         */
+        bool StreamData(std::shared_ptr<SampleProcessor> processor);
 
+
+
+        /**
+         * set the frequency for the device
+         * must be connected
+         * @param frequency
+         */
         void SetCenterFrequency(double frequency);
 
-        void StopStreaming();
+        /**
+         * set the sample rate for the device
+         * must be connected
+         * @param sampleRate
+         */
+        void SetSampleRateMSps(double sampleRate);
+
+        bool StopStreaming();
 
     private:
         std::string serverUrl;
         std::string driverName;
         bool isConnected;
 
-        // number of samples per second
-        size_t samples_per_second = 2.5e6;
+        /**
+         * number of blocks to store per channel in the ring buffer
+         */
+        size_t queueDepth = DEFAULT_QUEUE_SIZE;
+        std::string streamFormat = "CF32";
 
         std::shared_ptr<SoapySDR::Device> device;
-        std::shared_ptr<ReceiveQueue> receiveQueue;
+        /**
+         * receiver queues one for each channel.
+         */
+        std::vector<std::shared_ptr<ReceiveQueue>> receiveQueues;
+        // internal flag indicating if streaming is active.
         std::atomic<bool> isStreaming;
+        // current scan frequency
         std::atomic<double> centerFrequency;
+        // sample rate
+        std::atomic<double> sampleRate;
+        // bandwidth
+        std::atomic<double> bandwidth;
+
+        // after changing hardware configuration eg frequency, we should discard this many blocks
+        std::atomic<int> dropBlocks{2};
+
+        /**
+         * default sample rate for streaming
+         */
+        double defaultSampleRateMsps = DEFAULT_SCAN_MSPS_USB2;
+        double defaultBandwidthHz = DEFAULT_SCAN_MSPS_USB2;
+
+        /**
+         * configuration from the device.
+         */
+        double minSampleRate, maxSampleRate;
+        double minBandwidth, maxBandwidth;
+        double minFrequency, maxFrequency;
+        int numChannels;
+
+        /**
+         * internal threads
+         **/
+        std::vector<std::thread> receiverThreads{};
+        std::vector<std::thread> processorThreads{};
+
+        // active stream pointer
+        SoapySDR::Stream* activeStream = nullptr;
 
 
+        /**
+         * internal thread to begin the streaming over all channels
+         * and wait for the threads to join.
+         */
+        bool beginStream(std::shared_ptr<SampleProcessor> processor);
+
+        /**
+         * internal read loop to perform reading of IQ data from the device
+         */
+        void readLoop(int channel, SoapySDR::Stream* stream, std::shared_ptr<ReceiveQueue> queue, size_t mtu);
+
+        /**
+         * internal processing loop to perform processing of received IQ data
+         * and dispatch on the callback.
+         */
+        void processLoop(int channel, std::shared_ptr<ReceiveQueue> queue, size_t mtu, std::shared_ptr<SampleProcessor> processor);
     };
 }
 

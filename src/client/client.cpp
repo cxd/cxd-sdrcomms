@@ -5,11 +5,13 @@
 #include "include/client.h"
 #include "SoapySDR/Types.hpp"
 #include <iostream>
+#include <thread>
 
 namespace sdrcomms {
-    Client::Client(std::string serverUrl, std::string driverName) {
+    Client::Client(std::string serverUrl, std::string driverName, size_t queueDepth) {
         this->serverUrl = serverUrl;
         this->driverName = driverName;
+        this->queueDepth = queueDepth;
         this->Connect();
     }
 
@@ -48,11 +50,12 @@ namespace sdrcomms {
             std::cout << "Connection device information" << std::endl;
             std::string deviceDriver = device->getDriverKey();
             int numRxChannels = device->getNumChannels(SOAPY_SDR_RX);
+            numChannels = numRxChannels;
 
             std::cout << "Device Driver: " << deviceDriver << std::endl;
             std::cout << "Number of RX Channels: " << numRxChannels << std::endl;
 
-            for (int i=0;i<numRxChannels;i++) {
+            for (int i = 0; i < numRxChannels; i++) {
                 std::cout << "Channel " << i << std::endl;
                 std::vector<std::string> streamFormats = device->getStreamFormats(SOAPY_SDR_RX, i);
                 double gain = device->getGain(SOAPY_SDR_RX, i);
@@ -62,6 +65,7 @@ namespace sdrcomms {
                 SoapySDR::RangeList sampleRateRange = device->getSampleRateRange(SOAPY_SDR_RX, i);
                 double bandWidth = device->getBandwidth(SOAPY_SDR_RX, i);
                 SoapySDR::RangeList bandwidthRange = device->getBandwidthRange(SOAPY_SDR_RX, i);
+
                 std::cout << "Supported RX Channel Stream Formats" << std::endl;
                 for (auto format: streamFormats) {
                     std::cout << format << std::endl;
@@ -72,25 +76,34 @@ namespace sdrcomms {
                 std::cout << "Bandwidth: " << bandWidth << std::endl;
                 std::cout << "Supported Frequency Range: " << std::endl;
                 for (auto item = freqRange.begin(); item != freqRange.end(); ++item) {
+                    if (minFrequency == 0) {
+                        minFrequency = item->minimum();
+                    }
+                    maxFrequency = item->maximum();
                     std::cout << item->minimum() << " to " << item->maximum() << std::endl;
                 }
                 std::cout << "Supported Sample Rates Hz" << std::endl;
                 for (auto item = sampleRateRange.begin(); item != sampleRateRange.end(); ++item) {
+                    if (minSampleRate == 0) {
+                        minSampleRate = item->minimum();
+                    }
+                    maxSampleRate = item->maximum();
                     std::cout << item->minimum() << " to " << item->maximum() << std::endl;
                 }
                 std::cout << "Support Bandwidths" << std::endl;
                 for (auto item = bandwidthRange.begin(); item != bandwidthRange.end(); ++item) {
+                    if (minBandwidth == 0) {
+                        minBandwidth = item->minimum();
+                    }
+                    maxBandwidth = item->maximum();
                     std::cout << item->minimum() << " to " << item->maximum() << std::endl;
                 }
-
             }
             std::vector<std::string> sensors = device->listSensors();
             std::cout << "Supported Sensors" << std::endl;
-            for (auto sensor : sensors) {
+            for (auto sensor: sensors) {
                 std::cout << sensor << std::endl;
             }
-
-
         }
     }
 
@@ -114,33 +127,180 @@ namespace sdrcomms {
     }
 
 
-    void Client::StreamData(std::function<void(const IQBlock&)> callback) {
+    bool Client::StreamData(std::shared_ptr<SampleProcessor> processor) {
         if (isStreaming.load(std::memory_order_relaxed)) {
-            return;
+            return false;
         }
-        if (device == nullptr) {
-            return;
+        if (activeStream != nullptr) {
+            // stream is active and not terminated
+            return false;
         }
-        size_t mtu ; //= device->getStreamMTU();
-        // samples per second
-        receiveQueue = std::make_shared<ReceiveQueue>(samples_per_second*2, mtu);
 
-        //size_t mtu = device->getStreamMTU();
-
-        while (isStreaming.load(std::memory_order_relaxed)) {
-            IQBlock block;
-            //block.resize(mtu);
-            //device->readStream(stream, block.data(), mtu, flags, timeNs);
-
+        if (device == nullptr || !isConnected) {
+            // not initialised
+            return false;
         }
+        // setup processing threads internally.
+        bool started = this->beginStream(processor);
+        return started;
     }
 
     void Client::SetCenterFrequency(double frequency) {
-
+        if (frequency < minFrequency || frequency > maxFrequency) {
+            return;
+        }
+        if (!isConnected) {
+            return;
+        }
+        centerFrequency.store(frequency, std::memory_order_relaxed);
+        for (int i = 0; i < numChannels; i++) {
+            device->setFrequency(SOAPY_SDR_RX, i, frequency);
+        }
+        dropBlocks.store(2, std::memory_order_relaxed);
     }
 
-    void Client::StopStreaming() {
+
+    void Client::SetSampleRateMSps(double sampleRate) {
+        if (sampleRate < minSampleRate || sampleRate > maxSampleRate) {
+            return;
+        }
+        if (!isConnected) {
+            return;
+        }
+        for (int i = 0; i < numChannels; i++) {
+            device->setSampleRate(SOAPY_SDR_RX, i, sampleRate);
+        }
+        dropBlocks.store(2, std::memory_order_relaxed);
+        this->sampleRate.store(sampleRate, std::memory_order_relaxed);
+        this->bandwidth.store(sampleRate, std::memory_order_relaxed);
+    }
+
+    bool Client::StopStreaming() {
+        if (device == nullptr || !isConnected) {
+            return false;
+        }
+        if (activeStream == nullptr) {
+            return false;
+        }
         isStreaming.store(false, std::memory_order_relaxed);
+        // now we iterate each of the active threads
+        for (auto &t : receiverThreads) {
+            if (t.joinable()) {
+                t.join();
+            }
+        }
+        for (auto &t : processorThreads) {
+            if (t.joinable()) {
+                t.join();
+            }
+        }
+        // clean up the stream
+        device->deactivateStream(activeStream);
+        device->closeStream(activeStream);
+        activeStream = nullptr;
+        return true;
     }
 
+    bool Client::beginStream(std::shared_ptr<SampleProcessor> processor) {
+        std::vector<size_t> channels;
+        channels.resize(numChannels);
+        for (size_t i = 0; i < numChannels; i++) {
+            channels.push_back(i);
+        }
+
+        activeStream = device->setupStream(SOAPY_SDR_RX, streamFormat, channels);
+
+
+        if (!activeStream) {
+            isStreaming.store(false, std::memory_order_relaxed);
+            return false;
+        }
+        device->activateStream(activeStream);
+
+        size_t mtu = device->getStreamMTU(activeStream);
+        receiveQueues.resize(numChannels);
+        for (int i = 0; i < numChannels; i++) {
+            // samples per second
+            auto queue = std::make_shared<ReceiveQueue>(queueDepth, mtu);
+            receiveQueues.emplace_back(queue);
+        }
+
+        receiverThreads.resize(numChannels);
+        // setup receiver threads.
+        for (int i = 0; i < numChannels; i++) {
+            receiverThreads.push_back(std::thread(&Client::readLoop, this,
+                                                  i,
+                                                  activeStream,
+                                                  receiveQueues[i],
+                                                  mtu)
+            );
+        }
+        // setup processor thread
+
+        processorThreads.resize(numChannels);
+        for (int i=0;i<numChannels;i++) {
+            processorThreads.push_back(std::thread(&Client::processLoop, this,
+                                                    i,
+                                                    receiveQueues[i],
+                                                    mtu,
+                                                    callback)
+            );
+        }
+
+
+        return true;
+    }
+
+    void Client::readLoop(int channel, SoapySDR::Stream *stream, std::shared_ptr<ReceiveQueue> queue, size_t mtu) {
+        int flags = 0;
+        long long timeNs = 0;
+        const long timeoutUs = 100000;
+        while (isStreaming.load(std::memory_order_relaxed)) {
+            IQBlock block {mtu};
+            void* buffer [] = { block.samples.data() };
+            int numsamples = device->readStream(stream, buffer, mtu, flags, timeNs, timeoutUs);
+            double freq = centerFrequency.load(std::memory_order_relaxed);
+            if (numsamples > 0) {
+                int attempt = 0;
+                // try multiple times to push the data allowing the queue to catch up.
+                while (!queue->push(block.samples.data(), numsamples, freq) && attempt < 5) {
+                    std::this_thread::yield();
+                    ++attempt;
+                }
+                if (attempt > 5) {
+                    std::cerr << "[" << channel << "] Failed to push data to queue after multiple attempts." << std::endl;
+                }
+            }
+        }
+    }
+
+    /**
+     * enter the process loop
+     */
+    void Client::processLoop(int channel, std::shared_ptr<ReceiveQueue> queue, size_t mtu, std::shared_ptr<SampleProcessor> processor) {
+        while (isStreaming.load(std::memory_order_relaxed)) {
+            IQBlock block {mtu};
+            if (queue->pop(block)) {
+                bool process_data = false;
+                if (dropBlocks.load(std::memory_order_relaxed) <= 0) {
+                    process_data = true;
+                } else {
+                    // subtract 1
+                    dropBlocks.fetch_sub(1, std::memory_order_relaxed);
+                }
+                if (process_data) {
+                    try {
+                        // execute the callback
+                        processor->process(block);
+                    } catch (std::exception &e) {
+                        std::cerr << "[" << channel << "] Exception in callback: " << e.what() << std::endl;
+                    }
+                } else {
+                    std::this_thread::yield();
+                }
+            } else {
+                std::this_thread::yield();
+            }
+        }
+    }
 }

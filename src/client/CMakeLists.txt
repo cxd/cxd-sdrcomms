@@ -56,7 +56,12 @@ add_library(client_static STATIC include/client.h
         IQBlock.cpp
         include/IQBlock.h
         ReceiveQueue.cpp
-        include/ReceiveQueue.h)
+        include/ReceiveQueue.h
+        include/constants.h
+        SampleProcessor.cpp
+        include/SampleProcessor.h
+        SampleProcessorImpl.cpp
+        include/SampleProcessorImpl.h)
 
 
 # 1. Manually pull the source directory variable from the fetched SoapySDR configuration
