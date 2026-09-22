@@ -21,6 +21,11 @@ namespace sdrcomms {
      * it should be large enough to allow the processing threads to keep up with the incoming data.
      */
     const int DEFAULT_QUEUE_SIZE = 128;
+
+    /**
+     * default center frequency.
+     */
+    const double DEFAULT_CENTER_FREQUENCY = 100e6;
 }
 
 #endif //SDRCOMMS_CONTANTS_H

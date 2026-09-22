@@ -13,7 +13,7 @@ namespace sdrcomms {
          * process the supplied IQBlock
          * @param block
          */
-        void process(const IQBlock &block) = 0;
+        virtual void process(const IQBlock &block) = 0;
     };
 }
 

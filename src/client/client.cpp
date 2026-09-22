@@ -184,12 +184,12 @@ namespace sdrcomms {
         }
         isStreaming.store(false, std::memory_order_relaxed);
         // now we iterate each of the active threads
-        for (auto &t : receiverThreads) {
+        for (auto &t: receiverThreads) {
             if (t.joinable()) {
                 t.join();
             }
         }
-        for (auto &t : processorThreads) {
+        for (auto &t: processorThreads) {
             if (t.joinable()) {
                 t.join();
             }
@@ -238,12 +238,12 @@ namespace sdrcomms {
         // setup processor thread
 
         processorThreads.resize(numChannels);
-        for (int i=0;i<numChannels;i++) {
+        for (int i = 0; i < numChannels; i++) {
             processorThreads.push_back(std::thread(&Client::processLoop, this,
-                                                    i,
-                                                    receiveQueues[i],
-                                                    mtu,
-                                                    callback)
+                                                   i,
+                                                   receiveQueues[i],
+                                                   mtu,
+                                                   processor)
             );
         }
 
@@ -256,8 +256,8 @@ namespace sdrcomms {
         long long timeNs = 0;
         const long timeoutUs = 100000;
         while (isStreaming.load(std::memory_order_relaxed)) {
-            IQBlock block {mtu};
-            void* buffer [] = { block.samples.data() };
+            IQBlock block{mtu};
+            void *buffer[] = {block.samples.data()};
             int numsamples = device->readStream(stream, buffer, mtu, flags, timeNs, timeoutUs);
             double freq = centerFrequency.load(std::memory_order_relaxed);
             if (numsamples > 0) {
@@ -268,7 +268,8 @@ namespace sdrcomms {
                     ++attempt;
                 }
                 if (attempt > 5) {
-                    std::cerr << "[" << channel << "] Failed to push data to queue after multiple attempts." << std::endl;
+                    std::cerr << "[" << channel << "] Failed to push data to queue after multiple attempts." <<
+                            std::endl;
                 }
             }
         }
@@ -277,9 +278,10 @@ namespace sdrcomms {
     /**
      * enter the process loop
      */
-    void Client::processLoop(int channel, std::shared_ptr<ReceiveQueue> queue, size_t mtu, std::shared_ptr<SampleProcessor> processor) {
+    void Client::processLoop(int channel, std::shared_ptr<ReceiveQueue> queue, size_t mtu,
+                             std::shared_ptr<SampleProcessor> processor) {
         while (isStreaming.load(std::memory_order_relaxed)) {
-            IQBlock block {mtu};
+            IQBlock block{mtu};
             if (queue->pop(block)) {
                 bool process_data = false;
                 if (dropBlocks.load(std::memory_order_relaxed) <= 0) {
