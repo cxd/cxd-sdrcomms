@@ -98,3 +98,50 @@ endif()
 
 
 add_subdirectory(src)
+
+
+
+# Define a standard base path if one isn't already specified (e.g., /usr/local)
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation root directory" FORCE)
+endif()
+# --- Component A: Core Development Runtime (Libraries & Headers) ---
+install(TARGETS SoapySDR
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin
+        COMPONENT Development
+)
+
+# Export the headers downloaded via FetchContent so your system apps can see them globally
+install(DIRECTORY "${soapysdr_SOURCE_DIR}/include/SoapySDR"
+        DESTINATION include
+        COMPONENT Development
+)
+
+# --- Component B: Network Server Daemon & Proxy Engine ---
+if(TARGET SoapySDRServer)
+    install(TARGETS SoapySDRServer
+            RUNTIME DESTINATION bin
+            COMPONENT Server
+    )
+endif()
+
+
+# --- Component C: Dynamic Hardware & Network Plugin Drivers ---
+# SoapySDR searches a strict, nested directory layout structure to load plugins
+set(SOAPY_MODULES_LAYOUT "lib/SoapySDR_custom/modules0.8")
+
+if(TARGET remoteSupport)
+    install(TARGETS remoteSupport
+            LIBRARY DESTINATION ${SOAPY_MODULES_LAYOUT}
+            COMPONENT Development
+    )
+endif()
+
+if(TARGET plutoSupport)
+    install(TARGETS plutoSupport
+            LIBRARY DESTINATION ${SOAPY_MODULES_LAYOUT}
+            COMPONENT Server
+    )
+endif()

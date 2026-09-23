@@ -1,0 +1,13 @@
+[Unit]
+Description=SoapyRemote Custom Server
+After=network.target
+
+[Service]
+Environment="SOAPY_SDR_PLUGIN_PATH=/usr/local/lib/SoapySDR_custom/modules0.8/"
+ExecStart=/usr/local/bin/SoapySDRServer --bind="0.0.0.0:11111"
+KillMode=process
+Restart=on-abnormal
+
+[Install]
+WantedBy=multi-user.target
+Alias=SoapySDRServer.service
