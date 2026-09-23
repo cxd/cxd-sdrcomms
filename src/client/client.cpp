@@ -12,7 +12,6 @@ namespace sdrcomms {
         this->serverUrl = serverUrl;
         this->driverName = driverName;
         this->queueDepth = queueDepth;
-        this->Connect();
     }
 
     bool Client::Connect() {
