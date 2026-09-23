@@ -208,8 +208,11 @@ namespace sdrcomms {
         for (size_t i = 0; i < numChannels; i++) {
             channels.push_back(i);
         }
+        SoapySDR::Kwargs streamArgs;
+        streamArgs["remote:mtu"] = "1024";     // Limit packet size to standard safe transmission sizes
+        streamArgs["remote:window"] = "8";      // Force a sane, small socket ring buffer depth!
 
-        activeStream = device->setupStream(SOAPY_SDR_RX, streamFormat, channels);
+        activeStream = device->setupStream(SOAPY_SDR_RX, streamFormat, channels, streamArgs);
 
 
         if (!activeStream) {
