@@ -3,6 +3,7 @@ Description=SoapyRemote Custom Server
 After=network.target
 
 [Service]
+Environment="SOAPY_REMOTE_NO_LOG=1"
 Environment="LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH"
 Environment="SOAPY_SDR_PLUGIN_PATH=/usr/local/lib/SoapySDR/modules/"
 ExecStart=/usr/local/bin/SoapySDRServer --bind="0.0.0.0:11111"

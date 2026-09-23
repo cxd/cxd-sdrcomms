@@ -19,6 +19,8 @@ namespace sdrcomms {
         args["driver"] = driverName;
         args["remote"] = serverUrl;
         args["remote:no-log"] = "true";
+        // will need to make this a parameter.
+        //args["remote:uri"] = "ip:pluto.local";
 
         try {
             SoapySDR::Device *rawDevice = SoapySDR::Device::make(args);
