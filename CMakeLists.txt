@@ -130,6 +130,15 @@ else()
     # DOWNSTREAM FETCHCONTENT CONDITION CHECK
     # ============================================================================
     if(LIBIIO_FOUND AND LIBAD9361_FOUND)
+
+        # 🔥 THE CRITICAL FIX FOR THE GENERATOR EXPRESSION BUG 🔥
+        # Force-overwrite the SoapySDR include directory variable.
+        # This strips out the broken "$<BUILD_INTERFACE:...>" string and replaces it
+        # with the clean, absolute path that SoapyPluto's file() command expects.
+        set(SoapySDR_INCLUDE_DIRS "${soapysdr_SOURCE_DIR}/include" CACHE PATH "Fix generator expression bug" FORCE)
+        set(SOAPY_SDR_INCLUDE_DIRS "${soapysdr_SOURCE_DIR}/include" CACHE PATH "Fix generator expression bug variant" FORCE)
+
+
         FetchContent_Declare(
                 soapypluto
                 GIT_REPOSITORY https://github.com/pothosware/SoapyPlutoSDR.git
