@@ -76,10 +76,60 @@ else()
 
     # --- 4. Declare and Populate SoapyPluto Hardware Driver ---
     # NOTE: Host environment must have libiio development binaries installed!
-    find_package(libiio QUIET)
-    find_package(libad9361 QUIET)
+    # ============================================================================
+    # LINUX MULTIARCH HARDWARE DETECTION OVERRIDES
+    # ============================================================================
+    if(NOT APPLE AND NOT WIN32)
+        # 1. Load the native CMake PkgConfig finder module wrapper
+        find_package(PkgConfig REQUIRED)
 
-    if(libiio_FOUND AND libad9361_FOUND)
+        # 2. Query pkg-config to extract system multiarch paths for libiio
+        pkg_check_modules(PKG_IIO QUIET libiio)
+        if(PKG_IIO_FOUND)
+            set(LIBIIO_FOUND TRUE)
+            set(LIBIIO_INCLUDE_DIRS "${PKG_IIO_INCLUDE_DIRS}")
+            set(LIBIIO_LIBRARIES "${PKG_IIO_LIBRARIES}")
+
+            # Inject into global cache so the FetchContent subproject inherits them
+            set(LIBIIO_INCLUDE_DIR "${PKG_IIO_INCLUDE_DIRS}" CACHE PATH "" FORCE)
+            set(LIBIIO_LIBRARY "${PKG_IIO_LINK_LIBRARIES}" CACHE STRING "" FORCE)
+
+            message(STATUS "✅ Found libiio via PkgConfig: ${PKG_IIO_INCLUDE_DIRS}")
+        else()
+            # Fallback manual discovery pass if pkg-config registry is missing
+            find_path(LIBIIO_INCLUDE_DIR NAMES iio.h PATHS /usr/include)
+            find_library(LIBIIO_LIBRARY NAMES iio PATHS /usr/lib/x86_64-linux-gnu /usr/lib)
+            if(LIBIIO_INCLUDE_DIR AND LIBIIO_LIBRARY)
+                set(LIBIIO_FOUND TRUE)
+            endif()
+        endif()
+
+        # 3. Query pkg-config to extract system multiarch paths for libad9361
+        pkg_check_modules(PKG_AD9361 QUIET libad9361)
+        if(PKG_AD9361_FOUND)
+            set(LIBAD9361_FOUND TRUE)
+            set(LIBAD9361_INCLUDE_DIRS "${PKG_AD9361_INCLUDE_DIRS}")
+            set(LIBAD9361_LIBRARIES "${PKG_AD9361_LIBRARIES}")
+
+            # Inject into global cache so the FetchContent subproject inherits them
+            set(LIBAD9361_INCLUDE_DIR "${PKG_AD9361_INCLUDE_DIRS}" CACHE PATH "" FORCE)
+            set(LIBAD9361_LIBRARY "${PKG_AD9361_LINK_LIBRARIES}" CACHE STRING "" FORCE)
+
+            message(STATUS "✅ Found libad9361 via PkgConfig: ${PKG_AD9361_INCLUDE_DIRS}")
+        else()
+            # Fallback manual discovery pass if pkg-config registry is missing
+            find_path(LIBAD9361_INCLUDE_DIR NAMES ad9361.h PATHS /usr/include)
+            find_library(LIBAD9361_LIBRARY NAMES ad9361 PATHS /usr/lib/x86_64-linux-gnu /usr/lib)
+            if(LIBAD9361_INCLUDE_DIR AND LIBAD9361_LIBRARY)
+                set(LIBAD9361_FOUND TRUE)
+            endif()
+        endif()
+    endif()
+
+    # ============================================================================
+    # DOWNSTREAM FETCHCONTENT CONDITION CHECK
+    # ============================================================================
+    if(LIBIIO_FOUND AND LIBAD9361_FOUND)
         FetchContent_Declare(
                 soapypluto
                 GIT_REPOSITORY https://github.com/pothosware/SoapyPlutoSDR.git
