@@ -35,6 +35,34 @@ if(NOT soapysdr_POPULATED)
     FetchContent_Populate(soapysdr)
     # Inject it strictly as an internal subdirectory target
     add_subdirectory("${soapysdr_SOURCE_DIR}" "${soapysdr_BINARY_DIR}")
+
+    set(SoapySDR_DIR "${soapysdr_BINARY_DIR}" CACHE PATH "Redirect to fetched core binary" FORCE)
+    set(soapysdr_DIR "${soapysdr_BINARY_DIR}" CACHE PATH "Redirect to fetched core binary" FORCE)
+
+    # 2. Tell CMake that the package is already "Found" so find_package returns immediately
+    set(SoapySDR_FOUND TRUE CACHE BOOL "Force package found status" FORCE)
+    set(soapysdr_FOUND TRUE CACHE BOOL "Force package found status" FORCE)
+
+    # 3. Create the standard modern namespaced alias target that SoapyPluto links against
+    if(NOT TARGET SoapySDR::SoapySDR)
+        add_library(SoapySDR::SoapySDR ALIAS SoapySDR)
+    endif()
+
+    file(WRITE "${soapysdr_BINARY_DIR}/SoapySDRConfig.cmake" "
+        set(SoapySDR_FOUND TRUE)
+        set(SoapySDR_INCLUDE_DIRS \"${soapysdr_SOURCE_DIR}/include\")
+        set(SoapySDR_LIBRARIES SoapySDR)
+        if(NOT TARGET SoapySDR::SoapySDR)
+            add_library(SoapySDR::SoapySDR ALIAS SoapySDR)
+        endif()
+    ")
+
+    # Create the matching version tracking file to satisfy version checkers
+    file(WRITE "${soapysdr_BINARY_DIR}/SoapySDRConfigVersion.cmake" "
+        set(PACKAGE_VERSION \"0.8.1\")
+        set(PACKAGE_VERSION_COMPATIBLE TRUE)
+        set(PACKAGE_VERSION_EXACT TRUE)
+    ")
 endif()
 
 if(APPLE)
