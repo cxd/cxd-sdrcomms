@@ -19,6 +19,8 @@ namespace sdrcomms {
         SoapySDR::Kwargs args;
         args["driver"] = driverName;
         args["remote"] = serverUrl;
+        args["remote:no-log"] = "true";
+
         try {
             SoapySDR::Device *rawDevice = SoapySDR::Device::make(args);
             if (rawDevice == nullptr) {
