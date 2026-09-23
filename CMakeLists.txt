@@ -12,4 +12,89 @@ message(PROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+include(FetchContent)
+
+# --- 1. Global Soapy Build Configurations ---
+# Turn off native apps/tests to prevent target namespace clutter
+set(ENABLE_APPS OFF CACHE INTERNAL "")
+set(ENABLE_TESTS OFF CACHE INTERNAL "")
+
+# Force uniform dynamic plugin architectures down-tree
+set(BUILD_SHARED_LIBS ON CACHE INTERNAL "")
+
+# --- 2. Declare and Populate SoapySDR Core ---
+# 2. Fetch SoapySDR Core
+FetchContent_Declare(
+        soapysdr
+        GIT_REPOSITORY https://github.com/pothosware/SoapySDR.git
+        GIT_TAG        master
+)
+
+FetchContent_GetProperties(soapysdr)
+if(NOT soapysdr_POPULATED)
+    FetchContent_Populate(soapysdr)
+    # Inject it strictly as an internal subdirectory target
+    add_subdirectory("${soapysdr_SOURCE_DIR}" "${soapysdr_BINARY_DIR}")
+endif()
+
+if(APPLE)
+    # 1. Allow CMake to recognize and unpack macOS .framework bundles natively
+    set(CMAKE_FRAMEWORK_PATH "/Library/Frameworks" ${CMAKE_FRAMEWORK_PATH})
+
+    # 2. Hard-define the include and library targets to clear the SoapyPluto checks
+    set(LIBIIO_FOUND TRUE)
+    set(LIBIIO_INCLUDE_DIRS "/Library/Frameworks/iio.framework/Headers")
+    set(LIBIIO_LIBRARIES "-framework iio")
+
+    set(LIBAD9361_FOUND TRUE)
+    set(LIBAD9361_INCLUDE_DIRS "/Library/Frameworks/ad9361.framework/Headers")
+    set(LIBAD9361_LIBRARIES "-framework ad9361")
+
+    # Expose them to internal cache so downstream subdirectories inherit them
+    set(LIBIIO_INCLUDE_DIR ${LIBIIO_INCLUDE_DIRS} CACHE PATH "" FORCE)
+    set(LIBIIO_LIBRARY ${LIBIIO_LIBRARIES} CACHE STRING "" FORCE)
+    set(LIBAD9361_INCLUDE_DIR ${LIBAD9361_INCLUDE_DIRS} CACHE PATH "" FORCE)
+    set(LIBAD9361_LIBRARY ${LIBAD9361_LIBRARIES} CACHE STRING "" FORCE)
+
+    # Downstream modules will now pass through the validation check smoothly
+    if(LIBIIO_FOUND AND LIBAD9361_FOUND)
+        FetchContent_Declare(
+                soapypluto
+                GIT_REPOSITORY https://github.com/pothosware/SoapyPlutoSDR.git
+                GIT_TAG        master
+        )
+        FetchContent_GetProperties(soapypluto)
+        if(NOT soapypluto_POPULATED)
+            FetchContent_Populate(soapypluto)
+            add_subdirectory(${soapypluto_SOURCE_DIR} ${soapypluto_BINARY_DIR})
+        endif()
+    else()
+        message(WARNING "⚠️ libiio or libad9361 missing on host. Skipping SoapyPluto macOS module compilation.")
+    endif()
+
+else()
+
+    # --- 4. Declare and Populate SoapyPluto Hardware Driver ---
+    # NOTE: Host environment must have libiio development binaries installed!
+    find_package(libiio QUIET)
+    find_package(libad9361 QUIET)
+
+    if(libiio_FOUND AND libad9361_FOUND)
+        FetchContent_Declare(
+                soapypluto
+                GIT_REPOSITORY https://github.com/pothosware/SoapyPlutoSDR.git
+                GIT_TAG        master
+        )
+        FetchContent_GetProperties(soapypluto)
+        if(NOT soapypluto_POPULATED)
+            FetchContent_Populate(soapypluto)
+            add_subdirectory(${soapypluto_SOURCE_DIR} ${soapypluto_BINARY_DIR})
+        endif()
+    else()
+        message(WARNING "⚠️ libiio or libad9361 missing on host. Skipping SoapyPluto server module compilation.")
+    endif()
+
+endif()
+
+
 add_subdirectory(src)
