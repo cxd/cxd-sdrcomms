@@ -65,7 +65,7 @@ namespace sdrcomms {
          * number of blocks to store per channel in the ring buffer
          */
         size_t queueDepth = DEFAULT_QUEUE_SIZE;
-        std::string streamFormat = "CS16";
+        std::string streamFormat = "CF32";
 
         std::shared_ptr<SoapySDR::Device> device;
         /**

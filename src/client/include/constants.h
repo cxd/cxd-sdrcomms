@@ -30,7 +30,11 @@ namespace sdrcomms {
     /**
      * default minimum transmission unit
      */
-    const size_t DEFAULT_MTU = 1024;
+    const size_t DEFAULT_MTU = 4096;
+    /**
+     * default window depth.
+     */
+    const size_t DEFAULT_WINDOW_SIZE = 16;
 }
 
 #endif //SDRCOMMS_CONTANTS_H

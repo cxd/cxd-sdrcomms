@@ -220,8 +220,10 @@ namespace sdrcomms {
         }
         **/
         SoapySDR::Kwargs streamArgs;
-        streamArgs["remote:mtu"] = "1024"; // Limit packet size to standard safe transmission sizes
-        streamArgs["remote:window"] = "8"; // Force a sane, small socket ring buffer depth!
+        std::string mtuStr = std::to_string(DEFAULT_MTU);
+        std::string winStr = std::to_string(DEFAULT_WINDOW_SIZE);
+        streamArgs["remote:mtu"] = mtuStr; // Limit packet size to standard safe transmission sizes
+        streamArgs["remote:window"] = winStr; // Force a sane, small socket ring buffer depth!
 
         activeStream = device->setupStream(SOAPY_SDR_RX, streamFormat, channels, streamArgs);
 
