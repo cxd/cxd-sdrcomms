@@ -8,10 +8,18 @@
 #include <thread>
 
 namespace sdrcomms {
-    Client::Client(std::string serverUrl, std::string driverName, size_t queueDepth) {
+    Client::Client(std::string serverUrl,
+                   std::string driverName,
+                   std::string remoteDriverName,
+                   std::string remoteDeviceUri,
+                   std::string remoteBindAddr,
+                   size_t queueDepth) {
         this->serverUrl = serverUrl;
         this->driverName = driverName;
         this->queueDepth = queueDepth;
+        this->remoteDriverName = remoteDriverName;
+        this->remoteDeviceUri = remoteDeviceUri;
+        this->remoteBindAddr = remoteBindAddr;
     }
 
     bool Client::Connect() {
@@ -24,9 +32,9 @@ namespace sdrcomms {
         // use:
         // SoapySDRUtil --find="driver=remote,remote=tcp://localhost:11111"
         // to find device details
-        args["remote:bind"] = "192.168.0.102";
-        args["remote:driver"] = "plutosdr";
-        args["remote:uri"] = "ip:pluto.local";
+        args["remote:bind"] = remoteBindAddr;
+        args["remote:driver"] = remoteDriverName;
+        args["remote:uri"] = remoteDeviceUri;
 
         try {
             SoapySDR::Device *rawDevice = SoapySDR::Device::make(args);

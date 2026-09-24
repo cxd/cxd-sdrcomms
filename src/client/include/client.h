@@ -22,7 +22,21 @@
 namespace sdrcomms {
     class Client {
     public:
-        Client(std::string serverUrl, std::string driverName, size_t queueDepth);
+        /**
+         *
+         * @param serverUrl the remote server address tcp://ipaddr:port
+         * @param driverName the name of the driver "remote" for soapy server.
+         * @param remoteDriverName the name of the device driver managed by the remote server eg: "putosdr"
+         * @param remoteDeviceUri the remote device uri eg: "tcp:pluto.local"
+         * @param remoteBindAddr the bind address for communications with the server this would be the ipaddr of the server
+         * @param queueDepth the depth of the queue used to store messages.
+         */
+        Client(std::string serverUrl,
+               std::string driverName,
+               std::string remoteDriverName,
+               std::string remoteDeviceUri,
+               std::string remoteBindAddr,
+               size_t queueDepth);
 
         bool Connect();
 
@@ -59,6 +73,9 @@ namespace sdrcomms {
     private:
         std::string serverUrl;
         std::string driverName;
+        std::string remoteDriverName;
+        std::string remoteDeviceUri;
+        std::string remoteBindAddr;
         bool isConnected;
 
         /**
