@@ -1,0 +1,35 @@
+# Force Podman to fetch the explicit ARM64 architecture image variant
+FROM --platform=linux/arm64 ubuntu:24.04
+
+# Block interactive installation warnings
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install native ARM64 build tools and libraries
+# Because the container is natively ARM64, 'apt install' fetches the exact
+# arm64 versions of Boost and SDL2 automatically without any multiarch headaches!
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    clang \
+    cmake \
+    libsdl2-dev \
+    libboost-program-options-dev \
+    libsamplerate0-dev \
+    # Bare-metal display driver dependencies for KMS/DRM
+    libdrm-dev \
+    libgbm-dev \
+    # Embedded mobile GPU rendering layers for Mali chips
+    libgles2-mesa-dev \
+    libegl1-mesa-dev \
+    libiio0 \
+    libiio-dev \
+    libiio-utils \
+    libad9361-0 \
+    libad9361-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the inner container context path
+WORKDIR /workspace
+
+# Verify the container environment architecture on startup
+CMD ["uname", "-m"]
