@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     # Embedded mobile GPU rendering layers for Mali chips
     libgles2-mesa-dev \
     libegl1-mesa-dev \
+    libusb-dev \
     libiio0 \
     libiio-dev \
     libiio-utils \
