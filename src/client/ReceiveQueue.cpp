@@ -17,12 +17,10 @@ namespace sdrcomms {
 
     bool ReceiveQueue::push(const std::complex<float> *data, size_t size, double freq) {
         size_t current_write = write_index.load(std::memory_order_relaxed);
-        size_t current_read = read_index.load(std::memory_order_relaxed);
-        size_t next_write = (current_write % capacity);
+        size_t next_write = (current_write + 1 % capacity);
 
-        // if the next_write matches the current read, we return false.
-        // we need to wait until the read is not equal to the next write position
-        if (next_write == current_read) {
+        // check if the next write is equal to the read index.
+        if (next_write == read_index.load(std::memory_order_relaxed)) {
             return false;
         }
 
