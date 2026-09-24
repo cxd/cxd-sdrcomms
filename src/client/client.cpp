@@ -19,8 +19,14 @@ namespace sdrcomms {
         args["driver"] = driverName;
         args["remote"] = serverUrl;
         args["remote:no-log"] = "true";
-        // will need to make this a parameter.
-        //args["remote:uri"] = "ip:pluto.local";
+        // TODO: will need to make this a parameter.
+        // this can be supplied as a command line argument.
+        // use:
+        // SoapySDRUtil --find="driver=remote,remote=tcp://localhost:11111"
+        // to find device details
+        args["remote:bind"] = "192.168.0.102";
+        args["remote:driver"] = "plutosdr";
+        args["remote:uri"] = "ip:pluto.local";
 
         try {
             SoapySDR::Device *rawDevice = SoapySDR::Device::make(args);
@@ -206,13 +212,16 @@ namespace sdrcomms {
 
     bool Client::beginStream(std::shared_ptr<SampleProcessor> processor) {
         std::vector<size_t> channels;
-        channels.resize(numChannels);
+        // let the driver assign the channels
+        /**
+         *channels.resize(numChannels);
         for (size_t i = 0; i < numChannels; i++) {
             channels.push_back(i);
         }
+        **/
         SoapySDR::Kwargs streamArgs;
-        streamArgs["remote:mtu"] = "1024";     // Limit packet size to standard safe transmission sizes
-        streamArgs["remote:window"] = "8";      // Force a sane, small socket ring buffer depth!
+        streamArgs["remote:mtu"] = "1024"; // Limit packet size to standard safe transmission sizes
+        streamArgs["remote:window"] = "8"; // Force a sane, small socket ring buffer depth!
 
         activeStream = device->setupStream(SOAPY_SDR_RX, streamFormat, channels, streamArgs);
 
@@ -221,36 +230,46 @@ namespace sdrcomms {
             isStreaming.store(false, std::memory_order_relaxed);
             return false;
         }
-        device->activateStream(activeStream);
+        // setup streaming flag
+        isStreaming.store(true, std::memory_order_relaxed);
+
+        int flags = 0;
+        long long timeNs = 0;
+        size_t numElems = 0;
+        int result = device->activateStream(activeStream, flags, timeNs, numElems);
+        if (result != 0) {
+            std::cerr << "Error activating stream: " << result << std::endl;
+            return false;
+        }
+        // sleep before setting up threads
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         size_t mtu = device->getStreamMTU(activeStream);
         receiveQueues.resize(numChannels);
         for (int i = 0; i < numChannels; i++) {
             // samples per second
             auto queue = std::make_shared<ReceiveQueue>(queueDepth, mtu);
-            receiveQueues.emplace_back(queue);
+            receiveQueues[i] = queue;
         }
 
-        receiverThreads.resize(numChannels);
         // setup receiver threads.
         for (int i = 0; i < numChannels; i++) {
-            receiverThreads.push_back(std::thread(&Client::readLoop, this,
-                                                  i,
-                                                  activeStream,
-                                                  receiveQueues[i],
-                                                  mtu)
+            auto queuePtr = receiveQueues[i];
+            receiverThreads.push_back(std::thread(
+                    [this, i, queuePtr, mtu]() {
+                        this->readLoop(i, this->activeStream, queuePtr, mtu);
+                    })
             );
         }
         // setup processor thread
 
-        processorThreads.resize(numChannels);
         for (int i = 0; i < numChannels; i++) {
-            processorThreads.push_back(std::thread(&Client::processLoop, this,
-                                                   i,
-                                                   receiveQueues[i],
-                                                   mtu,
-                                                   processor)
-            );
+            auto queuePtr = receiveQueues[i];
+            processorThreads.push_back(std::thread(
+                [this, i, queuePtr, mtu, processor]() {
+                    this->processLoop(i, queuePtr, mtu, processor);
+                }
+            ));
         }
 
 
@@ -265,8 +284,14 @@ namespace sdrcomms {
             IQBlock block{mtu};
             void *buffer[] = {block.samples.data()};
             int numsamples = device->readStream(stream, buffer, mtu, flags, timeNs, timeoutUs);
+            if (numsamples < 0) {
+                std::cerr << "[" << channel << "] Failed to read stream data." << std::endl;
+            }
             double freq = centerFrequency.load(std::memory_order_relaxed);
             if (numsamples > 0) {
+#ifdef CL_DEBUG_PLUTO
+                std::cout << "[" << channel << "] Read: " << numsamples << mtu << std::endl;
+#endif
                 int attempt = 0;
                 // try multiple times to push the data allowing the queue to catch up.
                 while (!queue->push(block.samples.data(), numsamples, freq) && attempt < 5) {

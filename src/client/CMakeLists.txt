@@ -4,6 +4,7 @@ project(sdrcomms LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(ENABLE_SDR_DEBUG "Enable verbose PlutoSDR channel debugging" OFF)
 
 
 include(FetchContent)
@@ -62,6 +63,12 @@ add_library(client_static STATIC include/client.h
         include/SampleProcessor.h
         SampleProcessorImpl.cpp
         include/SampleProcessorImpl.h)
+
+# 2. If the option is turned ON, inject a preprocessor macro into the C++ compiler
+if(ENABLE_SDR_DEBUG)
+    target_compile_definitions(client_static PRIVATE CL_DEBUG_PLUTO=1)
+    message(STATUS ">>> PlutoSDR Conditional Debugging: ENABLED <<<")
+endif()
 
 
 # 1. Manually pull the source directory variable from the fetched SoapySDR configuration
