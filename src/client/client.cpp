@@ -292,8 +292,9 @@ namespace sdrcomms {
             double freq = centerFrequency.load(std::memory_order_relaxed);
             if (numsamples > 0) {
 #ifdef CL_DEBUG_PLUTO
-                std::cout << "[" << channel << "] Read: " << numsamples << mtu << std::endl;
+                std::cout << "[" << channel << "] Read: " << numsamples << " " << mtu << std::endl;
 #endif
+                std::cout << "[" << channel << "] Read: " << numsamples << " " << mtu << std::endl;
                 int attempt = 0;
                 // try multiple times to push the data allowing the queue to catch up.
                 while (!queue->push(block.samples.data(), numsamples, freq) && attempt < 5) {
@@ -325,6 +326,7 @@ namespace sdrcomms {
                 }
                 if (process_data) {
                     try {
+                        std::cerr << "[" << channel << "] Process block: " << block.samples.size() << std::endl;
                         // execute the callback
                         processor->process(block);
                     } catch (std::exception &e) {
