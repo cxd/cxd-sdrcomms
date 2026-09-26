@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
     libiio-utils \
     libad9361-0 \
     libad9361-dev \
+    libavahi-core-dev \
     git \
     && rm -rf /var/lib/apt/lists/*
 

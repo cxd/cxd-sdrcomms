@@ -334,7 +334,7 @@ namespace sdrcomms {
                 }
                 if (process_data) {
                     try {
-                        std::cerr << "[" << channel << "] Process block: " << block.samples.size() << std::endl;
+                        std::cout << "[" << channel << "] Process block: " << block.samples.size() << std::endl;
                         // execute the callback
                         processor->process(block);
                     } catch (std::exception &e) {
