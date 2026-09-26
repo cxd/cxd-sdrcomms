@@ -1,3 +1,4 @@
+#include <CLI/CLI.hpp>
 #include <iostream>
 #include "client.h"
 #include "constants.h"
@@ -6,19 +7,50 @@
 #include <chrono>
 #include "MockProcessor.h"
 
-int main() {
+/*
+ * using argument parser CLI11
+ * https://cliutils.github.io/CLI11/book-flags.html
+ */
+
+int main(int argc, char **argv) {
     std::cout << "Initialising SoapySDR" << std::endl;
-    /*
-    * args["remote:bind"] = "192.168.0.102";
-    args["remote:driver"] = "plutosdr";
-    args["remote:uri"] = "ip:pluto.local";
+    CLI::App app;
+    std::string serverUri;
+    CLI::Option *serverUriOpt = app.add_option("-s,--server-uri", serverUri,
+                                               "The Uri for the soapyremote-server eg: tcp://ipaddr:port");
+    std::string driverName;
+    CLI::Option *driverOpt = app.add_option("-d,--driver-name", driverName, "The name of the local driver ie: remote");
+    std::string remoteDriver;
+    CLI::Option *remoteDriverOpt = app.add_option("-r,--remote-driver", remoteDriver,
+                                                  "The name of the remote driver ie: plutosdr");
+    std::string deviceUri;
+    CLI::Option *deviceOpt = app.add_option("-u,--device-uri", deviceUri, "The uri for the device ie: ip:pluto.local");
+    std::string bindAddress;
+    CLI::Option *bindOpt = app.add_option("-b,--bind-address", bindAddress,
+                                          "The bind address for the remote server ie: 192.168.0.102");
+
+    CLI11_PARSE(app, argc, argv);
+
+    if (serverUriOpt->count() == 0 || bindOpt->count() == 0 ||
+        driverOpt->count() == 0 || deviceOpt->count() == 0 || remoteDriverOpt->count() == 0) {
+        std::cout << "Soapy Receiver Client" << std::endl;
+        std::cout << app.help() << std::endl;
+        return 1;
+    }
+
+    /* Example
+    --server-uri="tcp://192.168.0.102:11111"
+        --driver-name="remote"
+        --remove-driver="plutosdr"
+        --device-uri="ip:pluto.local"
+        --bind-address="192.168.0.102"
     */
     sdrcomms::Client client{
-        "tcp://192.168.0.102:11111",
-        "remote",
-        "plutosdr",
-        "ip:pluto.local",
-        "192.168.0.102",
+        serverUri,
+        driverName,
+        remoteDriver,
+        deviceUri,
+        bindAddress,
         sdrcomms::DEFAULT_QUEUE_SIZE
     };
     client.PrintSoapySDRInfo();
@@ -26,6 +58,9 @@ int main() {
     std::cout << "Client connected: " << isConnectd << std::endl;
     if (isConnectd) {
         client.PrintDeviceInfo();
+    } else {
+        std::cerr << "Could not connect to soapysdr server" << std::endl;
+        return 1;
     }
     client.SetCenterFrequency(sdrcomms::DEFAULT_CENTER_FREQUENCY);
     auto processor = std::make_shared<MockProcessor>();

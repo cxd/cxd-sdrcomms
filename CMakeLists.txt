@@ -158,7 +158,7 @@ else()
     # DOWNSTREAM FETCHCONTENT CONDITION CHECK
     # ============================================================================
     if(LIBIIO_FOUND AND LIBAD9361_FOUND)
-
+        message(STATUS "libiio or libad9361 found on host. SoapyPluto server module compilation.")
         # 🔥 THE CRITICAL FIX FOR THE GENERATOR EXPRESSION BUG 🔥
         # Force-overwrite the SoapySDR include directory variable.
         # This strips out the broken "$<BUILD_INTERFACE:...>" string and replaces it
