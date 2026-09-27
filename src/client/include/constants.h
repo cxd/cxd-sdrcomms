@@ -13,7 +13,7 @@ namespace sdrcomms {
      *
      *
      */
-    const double DEFAULT_SCAN_MSPS_USB2 = 3.0e6;
+    const double DEFAULT_SAMPLE_RATE_MSPS = 3.0e6;
 
     /**
      * default queue depth.
@@ -29,10 +29,13 @@ namespace sdrcomms {
 
     /**
      * default minimum transmission unit
+     * This is set in bytes.
+     * 4096
      */
     const size_t DEFAULT_MTU = 1024;
     /**
      * default window depth.
+     * size of the kernel buffer in bytes.
      */
     const size_t DEFAULT_WINDOW_SIZE = 16;
 }

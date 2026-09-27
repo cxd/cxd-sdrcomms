@@ -33,3 +33,8 @@ or
 ```aiignore
 iio_info -u "usb:1.4.5"
 ```
+
+
+```aiignore
+ SoapySDRUtil --find="remote=tcp://192.168.0.89:11111,remote:driver=plutosdr"
+```

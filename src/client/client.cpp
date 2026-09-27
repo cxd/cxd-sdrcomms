@@ -24,17 +24,28 @@ namespace sdrcomms {
 
     bool Client::Connect() {
         SoapySDR::Kwargs args;
-        args["driver"] = driverName;
+        args["device"] = driverName;
         args["remote"] = serverUrl;
-        args["remote:no-log"] = "true";
-        // TODO: will need to make this a parameter.
+        if (remoteBindAddr.length() > 0) {
+            args["remote:bind"] = remoteBindAddr;
+        }
+        if (remoteDriverName.length() > 0) {
+            args["remote:driver"] = remoteDriverName;
+        }
+        // customisation for plutosdr.
+        if (driverName == "plutosdr") {
+            // custom configuration
+            std::string mtuStr = std::to_string(DEFAULT_MTU);
+            args["buffer_size"] = mtuStr;
+        }
         // this can be supplied as a command line argument.
         // use:
         // SoapySDRUtil --find="driver=remote,remote=tcp://localhost:11111"
         // to find device details
-        args["remote:bind"] = remoteBindAddr;
-        args["remote:driver"] = remoteDriverName;
-        args["remote:uri"] = remoteDeviceUri;
+        if (remoteDeviceUri.length() > 0) {
+            args["remote:uri"] = remoteDeviceUri;
+            args["remote:no-log"] = "true";
+        }
 
         try {
             SoapySDR::Device *rawDevice = SoapySDR::Device::make(args);
@@ -169,6 +180,9 @@ namespace sdrcomms {
         if (!isConnected) {
             return;
         }
+#ifdef CL_DEBUG_PLUTO
+        std::cout << "Set Center Frequency: " << frequency << std::endl;
+#endif
         centerFrequency.store(frequency, std::memory_order_relaxed);
         for (int i = 0; i < numChannels; i++) {
             device->setFrequency(SOAPY_SDR_RX, i, frequency);
@@ -186,6 +200,7 @@ namespace sdrcomms {
         }
         for (int i = 0; i < numChannels; i++) {
             device->setSampleRate(SOAPY_SDR_RX, i, sampleRate);
+            device->setBandwidth(SOAPY_SDR_RX, i, sampleRate);
         }
         dropBlocks.store(2, std::memory_order_relaxed);
         this->sampleRate.store(sampleRate, std::memory_order_relaxed);
@@ -230,9 +245,17 @@ namespace sdrcomms {
         SoapySDR::Kwargs streamArgs;
         std::string mtuStr = std::to_string(DEFAULT_MTU);
         std::string winStr = std::to_string(DEFAULT_WINDOW_SIZE);
-        streamArgs["remote:mtu"] = mtuStr; // Limit packet size to standard safe transmission sizes
-        streamArgs["remote:window"] = winStr; // Force a sane, small socket ring buffer depth!
+        streamArgs["mtu"] = mtuStr;
 
+        if (serverUrl.length() > 0) {
+            streamArgs["remote:mtu"] = mtuStr; // Limit packet size to standard safe transmission sizes
+            streamArgs["remote:format"] = "CS16";
+            streamArgs["remote:window"] = winStr; // Force a sane, small socket ring buffer depth!
+            streamArgs["remote:timeout"] = "200"; // milliseconds timeout
+            streamArgs["remote:buffer_size"] = mtuStr;
+        } else {
+            streamArgs["buffer_size"] = mtuStr;
+        }
         activeStream = device->setupStream(SOAPY_SDR_RX, streamFormat, channels, streamArgs);
 
 
@@ -255,6 +278,7 @@ namespace sdrcomms {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         size_t mtu = device->getStreamMTU(activeStream);
+        std::cout << "Stream MTU: " << mtu << std::endl;
         receiveQueues.resize(numChannels);
         for (int i = 0; i < numChannels; i++) {
             // samples per second
@@ -298,14 +322,14 @@ namespace sdrcomms {
                 std::cerr << "[" << channel << "] Failed to read stream data." << std::endl;
             }
             double freq = centerFrequency.load(std::memory_order_relaxed);
-            if (numsamples > 0) {
+            if (numsamples > 0 && numsamples == mtu) {
 #ifdef CL_DEBUG_PLUTO
                 std::cout << "[" << channel << "] Read: " << numsamples << " " << mtu << std::endl;
 #endif
                 std::cout << "[" << channel << "] Read: " << numsamples << " " << mtu << std::endl;
                 int attempt = 0;
                 // try multiple times to push the data allowing the queue to catch up.
-                while (!queue->push(block.samples.data(), numsamples, freq) && attempt < 5) {
+                while (!queue->push(block.samples, numsamples, freq) && attempt < 5) {
                     std::this_thread::yield();
                     ++attempt;
                 }

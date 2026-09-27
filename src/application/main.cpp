@@ -30,14 +30,23 @@ int main(int argc, char **argv) {
                                           "The bind address for the remote server ie: 192.168.0.102");
 
     CLI11_PARSE(app, argc, argv);
-
-    if (serverUriOpt->count() == 0 || bindOpt->count() == 0 ||
-        driverOpt->count() == 0 || deviceOpt->count() == 0 || remoteDriverOpt->count() == 0) {
+    // these params can be used to connect to local device directly
+    // if specified.
+    if (driverOpt->count() == 0 || deviceOpt->count() == 0) {
         std::cout << "Soapy Receiver Client" << std::endl;
         std::cout << app.help() << std::endl;
         return 1;
     }
-
+    // these params are optionally used for remote connections.
+    if (serverUriOpt->count() == 0) {
+        serverUri = "";
+    }
+    if (bindOpt->count() == 0) {
+        bindAddress = "";
+    }
+    if (remoteDriverOpt->count() == 0) {
+        remoteDriver = "";
+    }
     /* Example
     --server-uri="tcp://192.168.0.102:11111"
         --driver-name="remote"
@@ -53,15 +62,15 @@ int main(int argc, char **argv) {
         bindAddress,
         sdrcomms::DEFAULT_QUEUE_SIZE
     };
-    client.PrintSoapySDRInfo();
     bool isConnectd = client.Connect();
     std::cout << "Client connected: " << isConnectd << std::endl;
     if (isConnectd) {
-        client.PrintDeviceInfo();
+        client.PrintSoapySDRInfo();
     } else {
         std::cerr << "Could not connect to soapysdr server" << std::endl;
         return 1;
     }
+    client.SetSampleRateMSps(sdrcomms::DEFAULT_SAMPLE_RATE_MSPS);
     client.SetCenterFrequency(sdrcomms::DEFAULT_CENTER_FREQUENCY);
     auto processor = std::make_shared<MockProcessor>();
     bool flag = client.StreamData(processor);

@@ -15,7 +15,7 @@ namespace sdrcomms {
         }
     }
 
-    bool ReceiveQueue::push(const std::complex<float> *data, size_t size, double freq) {
+    bool ReceiveQueue::push(const std::vector<std::complex<float>>& data, size_t size, double freq) {
         size_t current_write = write_index.load(std::memory_order_relaxed);
         size_t next_write = (current_write + 1 % capacity);
 
@@ -24,8 +24,8 @@ namespace sdrcomms {
             return false;
         }
 
-        // we can place the data into the current puffer position.
-        std::copy(data, data+size, blocks[next_write].samples.begin());
+        // vector copy samples.
+        blocks[next_write].samples = data;
         blocks[next_write].centerFreq = freq;
 
         // update the current write index.
