@@ -6,6 +6,7 @@
 #define SDRCOMMS_SAMPLESTREAMERPROCESSOR_H
 #include <atomic>
 #include <memory>
+#include <thread>
 #include <netinet/in.h>
 
 #include "constants.h"
@@ -56,15 +57,18 @@ namespace sdrcomms {
 
         // registered clients
         std::shared_ptr<std::vector<Client> > active_clients { std::make_shared<std::vector<Client>> () };
+
+        std::thread client_thread;
+        std::thread stream_thread;
         /**
          * wait for clients to connect
          */
-        void handle_client_connections();
+        void handle_client_connections(int server_socket);
 
         /**
          * iterate over each client and stream samples
          */
-        void stream_samples();
+        void stream_samples(int server_socket);
 
         /**
          * cleanup expired clients.

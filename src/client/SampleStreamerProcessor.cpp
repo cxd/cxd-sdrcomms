@@ -4,6 +4,11 @@
 
 #include "include/SampleStreamerProcessor.h"
 
+#include <iostream>
+#include <thread>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
 #include "constants.h"
 
 namespace sdrcomms {
@@ -25,8 +30,7 @@ namespace sdrcomms {
      * this is called from outside of the sdr client before passing into the client.
      */
     void SampleStreamerProcessor::startServer() {
-        // set running true
-        running.store(true, std::memory_order_release);
+
 
         // initialise threads.
         // we will use a registry of clients that connect to the udp port.
@@ -38,6 +42,38 @@ namespace sdrcomms {
         // the stream loop will send the stream to each client.
         // a client can also send a remove request to stop receiving stream data.
         // otherwise it will be removed from the list.
+
+        int server_socket = socket(AF_INET, SOCK_DGRAM, 0);
+        if (server_socket < 0) {
+            std::cerr << "Could not create server" << std::endl;
+            return;
+        }
+        sockaddr_in server_addr{};
+        std::memset(&server_addr, 0, sizeof(server_addr));
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_addr.s_addr = INADDR_ANY;
+        server_addr.sin_port = htons(udpPort);
+        if (bind(server_socket, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+            std::cerr << "Could not bind server" << std::endl;
+            close(server_socket);
+            return;
+        }
+
+        // set running true
+        running.store(true, std::memory_order_release);
+
+        // now we can configure the threads.
+        client_thread = std::thread(
+            [this, server_socket]() {
+                this->handle_client_connections(server_socket);
+            }
+        );
+
+        stream_thread = std::thread(
+            [this, server_socket]() {
+                this->stream_samples(server_socket);
+            }
+        );
     }
 
     /**
@@ -45,25 +81,77 @@ namespace sdrcomms {
      */
     void SampleStreamerProcessor::stopServer() {
         running.store(false, std::memory_order_release);
+        stream_thread.join();
+        client_thread.join();
     }
 
     /**
          * wait for clients to connect
          */
-    void SampleStreamerProcessor::handle_client_connections() {
+    void SampleStreamerProcessor::handle_client_connections(int server_socket) {
+        while (running.load(std::memory_order_acquire)) {
+            // if adding a client.
+            auto copy_active = std::atomic_load(&active_clients);
+            if (copy_active == nullptr) {
+                std::this_thread::yield();
+                continue;
+            }
+            char recv_buffer[16];
+            sockaddr_in client_addr{};
+            socklen_t client_len = sizeof(client_addr);
 
-
+            ssize_t recv_len = recvfrom(server_socket, recv_buffer, sizeof(recv_buffer), 0, (sockaddr *) &client_addr,
+                                        &client_len);
+            if (recv_len == -1) {
+                std::this_thread::yield();
+                continue;
+            }
+            recv_buffer[recv_len] = '\0';
+            std::string command(recv_buffer);
+            if (command == "REG") {
+                // add a client.
+                Client client{client_addr, std::chrono::steady_clock::now()};
+                auto it = std::find(copy_active->begin(), copy_active->end(), client);
+                if (it == copy_active->end()) {
+                    copy_active->push_back(client);
+                    std::atomic_store(&active_clients, copy_active);
+                } else {
+                    // existing client.
+                    it->heartbeat = std::chrono::steady_clock::now();
+                    std::atomic_store(&active_clients, copy_active);
+                }
+            } else if (command == "CLOSE") {
+                // TODO: remove client.
+                // Client client{client_addr, std::chrono::steady_clock::now() };
+            }
+            cleanup_expired_clients();
+        }
     }
 
     /**
      * iterate over each client and stream samples
      */
-    void SampleStreamerProcessor::stream_samples() {
-        if (active_clients == nullptr || active_clients->empty()) {
-            return;
-        }
-        for (auto client : *active_clients) {
-            // stream data to client.
+    void SampleStreamerProcessor::stream_samples(int server_socket) {
+        while (running.load(std::memory_order_acquire)) {
+            if (active_clients == nullptr || active_clients->empty()) {
+                std::this_thread::yield();
+                continue;
+            }
+            auto copy_active = std::atomic_load(&active_clients);
+            IQBlock block {REQUIRED_SAMPLES};
+            if (receiveQueue->pop(block)) {
+                // stream data to clients.
+                // TODO: serialize block
+                for (auto client: *copy_active) {
+                    // stream data to client.
+                    // example of streaming a struct ie: IQSample. struct IQSample { int16_t i; int16_t q; };
+                    // with packet buffer vector std::vector<IQSample> packet_buffer(PACKET_SAMPLES);
+                    // we need a data type to hold iq values, but we also want metadata in the header.
+                    //
+                    // sendto(server_fd, packet_buffer.data(), packet_buffer.size() * sizeof(IQSample), 0,
+                    //    (struct sockaddr*)&client.addr, sizeof(client.addr));
+                }
+            }
 
         }
     }
@@ -75,10 +163,11 @@ namespace sdrcomms {
         if (active_clients == nullptr || active_clients->empty()) {
             return;
         }
-        std::shared_ptr<std::vector<Client> >  new_clients { std::make_shared<std::vector<Client>> ()  };
+        std::shared_ptr<std::vector<Client> > new_clients{std::make_shared<std::vector<Client> >()};
         // find the clients that are not expired.
         auto now = std::chrono::steady_clock::now();
-        for (auto client : *active_clients) {
+        auto copy_active = std::atomic_load(&active_clients);
+        for (auto client: *copy_active) {
             auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - client.heartbeat).count();
             if (delta < UDP_CLIENT_STREAM_TIMEOUT * 1000) {
                 new_clients->push_back(client);
