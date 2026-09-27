@@ -31,13 +31,22 @@ namespace sdrcomms {
      * default minimum transmission unit
      * This is set in bytes.
      * 4096
+     * The remote server will convert this into samples
+     * because the remote server uses CS16, it will convert it into
+     * MTU/4 samples in this case that is 1006 samples.
+     * To use a sample preferred sample size power of 2, we should calculate
+     * desired samples * 4
+     * 1024*4 = 4096
+     * this results in smaller sample sizes.
      */
-    const size_t DEFAULT_MTU = 1024;
+    const size_t DEFAULT_MTU = 4096;
     /**
      * default window depth.
      * size of the kernel buffer in bytes.
+     * this controls the size of the buffer in the remote server.
      */
-    const size_t DEFAULT_WINDOW_SIZE = 16;
+    const size_t DEFAULT_WINDOW_SIZE = 4096;
+
 }
 
 #endif //SDRCOMMS_CONTANTS_H
