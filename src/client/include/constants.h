@@ -47,6 +47,11 @@ namespace sdrcomms {
      */
     const size_t DEFAULT_WINDOW_SIZE = 4096;
 
+    /**
+     * read this many samples per block.
+     */
+    const size_t REQUIRED_SAMPLES = 65536;
+
 }
 
 #endif //SDRCOMMS_CONTANTS_H

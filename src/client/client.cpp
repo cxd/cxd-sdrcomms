@@ -314,22 +314,56 @@ namespace sdrcomms {
         int flags = 0;
         long long timeNs = 0;
         const long timeoutUs = 100000;
+        // a vector to hold the previous samples that were not read.
+        std::vector<std::complex<float>> prev {};
         while (isStreaming.load(std::memory_order_relaxed)) {
-            IQBlock block{mtu};
-            void *buffer[] = {block.samples.data()};
-            int numsamples = device->readStream(stream, buffer, mtu, flags, timeNs, timeoutUs);
-            if (numsamples < 0) {
-                std::cerr << "[" << channel << "] Failed to read stream data." << std::endl;
+            size_t samples_read = 0;
+            size_t src_pos = 0;
+            std::vector<std::complex<float>> dest {};
+            // if we were left with any previous data we need to copy it into the destination.
+            if (prev.size() > 0) {
+                samples_read = accumulate_samples(REQUIRED_SAMPLES, samples_read, 0, prev, dest);
+                prev.clear();
             }
+            while (samples_read < REQUIRED_SAMPLES && isStreaming.load(std::memory_order_relaxed)) {
+                // vector to read into
+                std::vector<std::complex<float>> samples(mtu);
+                void *buffer[] = {samples.data()};
+                // we now need to read
+                int numsamples = device->readStream(stream, buffer, mtu, flags, timeNs, timeoutUs);
+                if (numsamples < 0) {
+                    std::cerr << "[" << channel << "] Failed to read stream data." << std::endl;
+                    continue;
+                }
+
+                if (dest.size() + samples.size() > REQUIRED_SAMPLES) {
+                    // we need to only take enough samples
+                    std::vector<std::complex<float>> tmp;
+                    prev.clear();
+                    tmp.reserve(REQUIRED_SAMPLES - dest.size());
+                    std::copy(samples.begin(), samples.begin() + (REQUIRED_SAMPLES - dest.size()), std::back_inserter(tmp));
+                    samples_read = accumulate_samples(REQUIRED_SAMPLES, samples_read, src_pos, tmp, dest);
+                    // slice the remaining samples into the previous vector.
+                    size_t n = samples.size() - tmp.size();
+                    std::copy(samples.begin() + n, samples.end(), std::back_inserter(prev));
+
+                } else {
+                    samples_read = accumulate_samples(REQUIRED_SAMPLES, samples_read, src_pos, samples, dest);
+
+                }
+
+            }
+
             double freq = centerFrequency.load(std::memory_order_relaxed);
-            if (numsamples > 0 && numsamples == mtu) {
+            if (samples_read >= REQUIRED_SAMPLES) {
+
 #ifdef CL_DEBUG_PLUTO
-                std::cout << "[" << channel << "] Read: " << numsamples << " " << mtu << std::endl;
+                std::cout << "[" << channel << "] Read: " << samples_read << " " << mtu << std::endl;
 #endif
-                std::cout << "[" << channel << "] Read: " << numsamples << " " << mtu << std::endl;
+                std::cout << "[" << channel << "] Read: " << samples_read << " " << mtu << std::endl;
                 int attempt = 0;
                 // try multiple times to push the data allowing the queue to catch up.
-                while (!queue->push(block.samples, numsamples, freq) && attempt < 5) {
+                while (!queue->push(dest, dest.size(), freq) && attempt < 5) {
                     std::this_thread::yield();
                     ++attempt;
                 }
@@ -339,6 +373,39 @@ namespace sdrcomms {
                 }
             }
         }
+    }
+
+
+    /**
+     * accumulate the samples from the last count of samples
+     * to the new count of samples.
+     * write from the source buffer into the destination.
+     * @param source
+     * @param destination
+     * @return
+     * the number of samples copied from the source into the destination.
+     */
+    size_t Client::accumulate_samples(size_t numSamples, size_t dest_pos, size_t src_pos, std::vector<std::complex<float>>& source, std::vector<std::complex<float>>& destination) {
+        if (dest_pos >= numSamples) {
+            return 0;
+        }
+        if (src_pos > source.size()) {
+            return 0;
+        }
+
+        size_t available_samples = source.size() - src_pos;
+        size_t safe_n = std::min(numSamples, available_samples);
+
+        size_t delta = dest_pos + safe_n;
+        if (delta > destination.size()) {
+            destination.resize(delta);
+        }
+
+        std::copy(source.begin() + src_pos,
+            source.begin() + src_pos + safe_n,
+            destination.begin() + dest_pos);
+        // in
+        return destination.size();
     }
 
     /**

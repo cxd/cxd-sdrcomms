@@ -137,6 +137,16 @@ namespace sdrcomms {
         void readLoop(int channel, SoapySDR::Stream* stream, std::shared_ptr<ReceiveQueue> queue, size_t mtu);
 
         /**
+         * accumulate the samples from the last count of samples
+         * to the new count of samples.
+         * write from the source buffer into the destination.
+         * @param source
+         * @param destination
+         * @return
+         */
+        size_t accumulate_samples(size_t numSamples, size_t dest_pos, size_t src_pos, std::vector<std::complex<float>>& source, std::vector<std::complex<float>>& destination) ;
+
+        /**
          * internal processing loop to perform processing of received IQ data
          * and dispatch on the callback.
          */
