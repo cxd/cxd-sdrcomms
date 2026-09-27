@@ -13,4 +13,4 @@ cp $SOAPY_BIN build/arm64/usr/local/bin/
 cp $SOAPY_LIB/*.so build/arm64/usr/local/lib/
 cp $SOAPY_LIB/*.so.* build/arm64/usr/local/lib/
 cp $SOAPY_SDR_PLUGIN_PATH/*.so build/arm64/usr/local/lib/modules/
-
+cp -r src/service build/
