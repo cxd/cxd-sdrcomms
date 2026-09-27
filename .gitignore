@@ -1,5 +1,6 @@
 **/.idea/**
 **/.junie/**
+**/build/**
 **/cmake-build-debug/**
 **/build_emulated_arm64/**
 **/build_clang_amd64/**
