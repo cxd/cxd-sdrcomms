@@ -25,7 +25,7 @@ namespace sdrcomms {
         }
 
         // vector copy samples.
-        blocks[next_write].samples = data;
+        blocks[next_write].samples = std::move(data);
         blocks[next_write].centerFreq = freq;
 
         // update the current write index.
