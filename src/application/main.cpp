@@ -29,6 +29,11 @@ int main(int argc, char **argv) {
     CLI::Option *bindOpt = app.add_option("-b,--bind-address", bindAddress,
                                           "The bind address for the remote server ie: 192.168.0.102");
 
+    int udp_stream_port = 15555;
+    CLI::Option *udpStreamPortOpt = app.add_option("-p,--udp-stream-port", udp_stream_port,
+                                                    "The port for the udp stream ie: 15555");
+
+
     CLI11_PARSE(app, argc, argv);
     // these params can be used to connect to local device directly
     // if specified.

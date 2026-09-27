@@ -1,0 +1,77 @@
+//
+// Created by Chris Davey on 27/9/2026.
+//
+
+#ifndef SDRCOMMS_SAMPLESTREAMERPROCESSOR_H
+#define SDRCOMMS_SAMPLESTREAMERPROCESSOR_H
+#include <atomic>
+#include <memory>
+#include <netinet/in.h>
+
+#include "constants.h"
+#include "SampleProcessor.h"
+#include "ReceiveQueue.h"
+namespace sdrcomms {
+
+    struct Client {
+        sockaddr_in address;
+        std::chrono::time_point<std::chrono::steady_clock> heartbeat;
+        // compare two clients.
+        bool operator==(const Client& other) const {
+            return address.sin_addr.s_addr == other.address.sin_addr.s_addr &&
+                address.sin_port == other.address.sin_port;
+        }
+    };
+
+
+    static_assert(std::is_trivially_copyable<Client>::value, "Client must be trivially copyable!");
+
+    /**
+     * a streaming processor that will forward samples to a connected client.
+     */
+    class SampleStreamerProcessor : public SampleProcessor {
+    public:
+        SampleStreamerProcessor(int udpPort);
+
+        void process(const IQBlock &block) override;
+
+        /**
+         * start the server process.
+         * this is called from outside of the sdr client before passing into the client.
+         */
+        void startServer();
+
+        /**
+         * stop the server process.
+         */
+        void stopServer();
+
+    private:
+        int udpPort;
+        std::atomic<bool> hasClient {false};
+        std::atomic<bool> running {false};
+
+        // internal receive queue
+        std::shared_ptr<ReceiveQueue> receiveQueue;
+
+        // registered clients
+        std::shared_ptr<std::vector<Client> > active_clients { std::make_shared<std::vector<Client>> () };
+        /**
+         * wait for clients to connect
+         */
+        void handle_client_connections();
+
+        /**
+         * iterate over each client and stream samples
+         */
+        void stream_samples();
+
+        /**
+         * cleanup expired clients.
+         */
+        void cleanup_expired_clients();
+
+    };
+} // sdrcomms
+
+#endif //SDRCOMMS_SAMPLESTREAMERPROCESSOR_H

@@ -52,6 +52,12 @@ namespace sdrcomms {
      */
     const size_t REQUIRED_SAMPLES = 65536;
 
+    /**
+     * stream timeout for udp clients
+     * after which they will be removed.
+     */
+    const int UDP_CLIENT_STREAM_TIMEOUT = 60;
+
 }
 
 #endif //SDRCOMMS_CONTANTS_H

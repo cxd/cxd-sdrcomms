@@ -282,7 +282,7 @@ namespace sdrcomms {
         receiveQueues.resize(numChannels);
         for (int i = 0; i < numChannels; i++) {
             // samples per second
-            auto queue = std::make_shared<ReceiveQueue>(queueDepth, mtu);
+            auto queue = std::make_shared<ReceiveQueue>(queueDepth, REQUIRED_SAMPLES);
             receiveQueues[i] = queue;
         }
 

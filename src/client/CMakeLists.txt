@@ -62,7 +62,9 @@ add_library(client_static STATIC include/client.h
         SampleProcessor.cpp
         include/SampleProcessor.h
         SampleProcessorImpl.cpp
-        include/SampleProcessorImpl.h)
+        include/SampleProcessorImpl.h
+        SampleStreamerProcessor.cpp
+        include/SampleStreamerProcessor.h)
 
 # 2. If the option is turned ON, inject a preprocessor macro into the C++ compiler
 if(ENABLE_SDR_DEBUG)
