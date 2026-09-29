@@ -15,10 +15,9 @@ add_executable(sdrcommsui
         include/netclient.h
 
 )
-# Link against the CLI11 library
-target_link_libraries(sdrcommsui PUBLIC cli11)
+include_directories(${cli11_SOURCE_DIR}/include)
 # Core link layer: Always link against your static drawing engine target
-target_link_libraries(application PRIVATE client_static)
+target_link_libraries(sdrcommsui PRIVATE client_static)
 
 
 # Include the folder so your #include statements can locate the headers
