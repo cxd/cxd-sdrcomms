@@ -27,7 +27,9 @@ include_directories(${cli11_SOURCE_DIR}/include)
 # 1. Define the executable target framework
 add_executable(application main.cpp
         MockProcessor.cpp
-        MockProcessor.h)
+        MockProcessor.h
+        ApplicationProcessor.cpp
+        ApplicationProcessor.h)
 
 set_target_properties(application PROPERTIES
         POSITION_INDEPENDENT_CODE 1

@@ -363,7 +363,11 @@ namespace sdrcomms {
                 std::cout << "[" << channel << "] Read: " << samples_read << " " << mtu << std::endl;
                 int attempt = 0;
                 // try multiple times to push the data allowing the queue to catch up.
-                while (!queue->push(dest, dest.size(), freq) && attempt < 5) {
+                auto now = std::chrono::system_clock::now();
+                auto duration = now.time_since_epoch();
+                auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+                long long timestampMs = millis.count();
+                while (!queue->push(timestampMs, channel, dest, dest.size(), freq) && attempt < 5) {
                     std::this_thread::yield();
                     ++attempt;
                 }

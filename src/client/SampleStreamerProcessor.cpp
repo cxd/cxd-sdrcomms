@@ -5,11 +5,13 @@
 #include "include/SampleStreamerProcessor.h"
 
 #include <iostream>
+#include <sstream>
 #include <thread>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#include "constants.h"
+#include "include/constants.h"
+#include "include/NetIQBlock.h"
 
 namespace sdrcomms {
     SampleStreamerProcessor::SampleStreamerProcessor(int udpPort) {
@@ -20,7 +22,7 @@ namespace sdrcomms {
 
     void SampleStreamerProcessor::process(const IQBlock &block) {
         if (running.load(std::memory_order_acquire)) {
-            receiveQueue->push(block.samples, block.samples.size(), block.centerFreq);
+            receiveQueue->push(block.timestampMs, block.channel, block.samples, block.samples.size(), block.centerFreq);
         }
     }
 
@@ -30,8 +32,6 @@ namespace sdrcomms {
      * this is called from outside of the sdr client before passing into the client.
      */
     void SampleStreamerProcessor::startServer() {
-
-
         // initialise threads.
         // we will use a registry of clients that connect to the udp port.
         // this will ideally be a lock free structure.
@@ -100,9 +100,9 @@ namespace sdrcomms {
             sockaddr_in client_addr{};
             socklen_t client_len = sizeof(client_addr);
 
-            ssize_t recv_len = recvfrom(server_socket, recv_buffer, sizeof(recv_buffer), 0, (sockaddr *) &client_addr,
+            ssize_t recv_len = recvfrom(server_socket, recv_buffer, sizeof(recv_buffer), MSG_DONTWAIT, (sockaddr *) &client_addr,
                                         &client_len);
-            if (recv_len == -1) {
+            if (recv_len < 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
                 std::this_thread::yield();
                 continue;
             }
@@ -110,7 +110,7 @@ namespace sdrcomms {
             std::string command(recv_buffer);
             if (command == "REG") {
                 // add a client.
-                Client client{client_addr, std::chrono::steady_clock::now()};
+                NetClient client{client_addr, std::chrono::steady_clock::now()};
                 auto it = std::find(copy_active->begin(), copy_active->end(), client);
                 if (it == copy_active->end()) {
                     copy_active->push_back(client);
@@ -121,11 +121,13 @@ namespace sdrcomms {
                     std::atomic_store(&active_clients, copy_active);
                 }
             } else if (command == "CLOSE") {
-                // TODO: remove client.
-                // Client client{client_addr, std::chrono::steady_clock::now() };
+                NetClient client{client_addr, std::chrono::steady_clock::now() };
+                remove_client(client);
             }
             cleanup_expired_clients();
         }
+        // linux or osx
+        ::close(server_socket);
     }
 
     /**
@@ -138,21 +140,28 @@ namespace sdrcomms {
                 continue;
             }
             auto copy_active = std::atomic_load(&active_clients);
-            IQBlock block {REQUIRED_SAMPLES};
+            IQBlock block{REQUIRED_SAMPLES};
             if (receiveQueue->pop(block)) {
                 // stream data to clients.
-                // TODO: serialize block
+                // serialize the block.
+                NetIQBlock netBlock{block};
+                std::ostringstream oss {std::ios::binary};
+                if (!netBlock.serialize(oss)) {
+                    // couldn't write to the stream need to skip this block.
+                    continue;
+                }
+                std::string bytes = oss.str();
+
                 for (auto client: *copy_active) {
                     // stream data to client.
                     // example of streaming a struct ie: IQSample. struct IQSample { int16_t i; int16_t q; };
                     // with packet buffer vector std::vector<IQSample> packet_buffer(PACKET_SAMPLES);
                     // we need a data type to hold iq values, but we also want metadata in the header.
                     //
-                    // sendto(server_fd, packet_buffer.data(), packet_buffer.size() * sizeof(IQSample), 0,
-                    //    (struct sockaddr*)&client.addr, sizeof(client.addr));
+                    sendto(server_socket, bytes.data(), bytes.size(), 0,
+                        (struct sockaddr*)&client.address, sizeof(client.address));
                 }
             }
-
         }
     }
 
@@ -163,7 +172,7 @@ namespace sdrcomms {
         if (active_clients == nullptr || active_clients->empty()) {
             return;
         }
-        std::shared_ptr<std::vector<Client> > new_clients{std::make_shared<std::vector<Client> >()};
+        std::shared_ptr<std::vector<NetClient> > new_clients{std::make_shared<std::vector<NetClient> >()};
         // find the clients that are not expired.
         auto now = std::chrono::steady_clock::now();
         auto copy_active = std::atomic_load(&active_clients);
@@ -175,5 +184,17 @@ namespace sdrcomms {
         }
         // atomically swap the client lists.
         std::atomic_store(&active_clients, new_clients);
+    }
+
+    void SampleStreamerProcessor::remove_client(const NetClient& client) {
+        if (active_clients == nullptr || active_clients->empty()) {
+            return;
+        }
+        auto copy_active = std::atomic_load(&active_clients);
+        auto it = std::find(copy_active->begin(), copy_active->end(), client);
+        if (it != copy_active->end()) {
+            copy_active->erase(it);
+        }
+        std::atomic_store(&active_clients, copy_active);
     }
 } // sdrcomms

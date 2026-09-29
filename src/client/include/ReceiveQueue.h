@@ -14,7 +14,7 @@ namespace sdrcomms {
     public:
         ReceiveQueue(size_t capacity, size_t sample_size);
 
-        bool push(const std::vector<std::complex<float>>& data, size_t size, double freq);
+        bool push(long long timestampMs, int channel, const std::vector<std::complex<float>>& data, size_t size, double freq);
 
         bool pop(IQBlock& dest_block);
 

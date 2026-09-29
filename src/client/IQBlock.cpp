@@ -13,4 +13,13 @@ namespace sdrcomms {
             this->samples[i] = std::complex<float>(0,0);
         }
     }
+
+
+    IQBlock::IQBlock(int channel, long long timestampMs, size_t sample_size, const std::vector<std::complex<float>> &samples) {
+        this->channel = channel;
+        this->timestampMs = timestampMs;
+        this->sample_size = sample_size;
+        //
+        this->samples = samples;
+    }
 } // sdrcomms

@@ -15,7 +15,7 @@ namespace sdrcomms {
         }
     }
 
-    bool ReceiveQueue::push(const std::vector<std::complex<float>>& data, size_t size, double freq) {
+    bool ReceiveQueue::push(long long timestamp, int channel, const std::vector<std::complex<float>>& data, size_t size, double freq) {
         size_t current_write = write_index.load(std::memory_order_relaxed);
         size_t next_write = (current_write + 1 % capacity);
         if (next_write >= blocks.size() - 1) {
@@ -27,6 +27,9 @@ namespace sdrcomms {
         }
 
         // vector copy samples.
+        blocks[next_write].timestampMs = timestamp;
+        blocks[next_write].channel = channel;
+        blocks[next_write].sample_size = size;
         blocks[next_write].samples = std::move(data);
         blocks[next_write].centerFreq = freq;
 

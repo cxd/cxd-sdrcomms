@@ -14,18 +14,18 @@
 #include "ReceiveQueue.h"
 namespace sdrcomms {
 
-    struct Client {
+    struct NetClient {
         sockaddr_in address;
         std::chrono::time_point<std::chrono::steady_clock> heartbeat;
         // compare two clients.
-        bool operator==(const Client& other) const {
+        bool operator==(const NetClient& other) const {
             return address.sin_addr.s_addr == other.address.sin_addr.s_addr &&
                 address.sin_port == other.address.sin_port;
         }
     };
 
 
-    static_assert(std::is_trivially_copyable<Client>::value, "Client must be trivially copyable!");
+    static_assert(std::is_trivially_copyable<NetClient>::value, "Client must be trivially copyable!");
 
     /**
      * a streaming processor that will forward samples to a connected client.
@@ -56,7 +56,7 @@ namespace sdrcomms {
         std::shared_ptr<ReceiveQueue> receiveQueue;
 
         // registered clients
-        std::shared_ptr<std::vector<Client> > active_clients { std::make_shared<std::vector<Client>> () };
+        std::shared_ptr<std::vector<NetClient> > active_clients { std::make_shared<std::vector<NetClient>> () };
 
         std::thread client_thread;
         std::thread stream_thread;
@@ -74,6 +74,11 @@ namespace sdrcomms {
          * cleanup expired clients.
          */
         void cleanup_expired_clients();
+
+        /**
+         * remove client.
+         */
+        void remove_client(const NetClient& client);
 
     };
 } // sdrcomms

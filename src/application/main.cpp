@@ -5,6 +5,8 @@
 #include <memory>
 #include <vector>
 #include <chrono>
+
+#include "ApplicationProcessor.h"
 #include "MockProcessor.h"
 
 /*
@@ -52,6 +54,9 @@ int main(int argc, char **argv) {
     if (remoteDriverOpt->count() == 0) {
         remoteDriver = "";
     }
+    if (udpStreamPortOpt->count() == 0) {
+        udp_stream_port = 15555;
+    }
     /* Example
     --server-uri="tcp://192.168.0.102:11111"
         --driver-name="remote"
@@ -77,7 +82,10 @@ int main(int argc, char **argv) {
     }
     client.SetSampleRateMSps(sdrcomms::DEFAULT_SAMPLE_RATE_MSPS);
     client.SetCenterFrequency(sdrcomms::DEFAULT_CENTER_FREQUENCY);
-    auto processor = std::make_shared<MockProcessor>();
+    auto processor = std::make_shared<ApplicationProcessor>(udp_stream_port);
+    // start the processor server to allow remote connections.
+    processor->startServer();
+
     bool flag = client.StreamData(processor);
     if (!flag) {
         std::cout << "Failed to stream data" << std::endl;
@@ -95,5 +103,6 @@ int main(int argc, char **argv) {
     }
     std::cout << "Stopping stream" << std::endl;
     client.StopStreaming();
+    processor->stopServer();
     return 0;
 }
