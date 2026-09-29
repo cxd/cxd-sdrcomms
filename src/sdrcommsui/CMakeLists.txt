@@ -15,6 +15,12 @@ add_executable(sdrcommsui
         include/netclient.h
 
 )
+FetchContent_GetProperties(cli11)
+if(NOT cli11_POPULATED)
+    FetchContent_Populate(cli11)
+    set(SOAPY_SDR_IN_TREE_SOURCE_DIR "${cli11_SOURCE_DIR}" CACHE INTERNAL "")
+    add_subdirectory(${cli11_SOURCE_DIR} ${cli11_BINARY_DIR})
+endif()
 include_directories(${cli11_SOURCE_DIR}/include)
 # Core link layer: Always link against your static drawing engine target
 target_link_libraries(sdrcommsui PRIVATE client_static)
