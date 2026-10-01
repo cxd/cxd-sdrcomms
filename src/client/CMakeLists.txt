@@ -53,6 +53,8 @@ FetchContent_MakeAvailable(soapyremote)
 
 find_package(Vulkan REQUIRED)
 message(STATUS "Vulkan found:")
+find_package(glslang REQUIRED)
+message(STATUS "glslang found:")
 # vKFFT
 FetchContent_Declare(
         vkfft
@@ -80,7 +82,9 @@ add_library(client_static STATIC include/client.h
         NetIQBlock.cpp
         include/NetIQBlock.h
         FFTTransform.cpp
-        include/FFTTransform.h)
+        include/FFTTransform.h
+        FFTSampleProcessor.cpp
+        include/FFTSampleProcessor.h)
 
 # 2. If the option is turned ON, inject a preprocessor macro into the C++ compiler
 if (ENABLE_SDR_DEBUG)
@@ -113,7 +117,9 @@ set_target_properties(client_static PROPERTIES
 if (APPLE)
     target_compile_definitions(client_static PRIVATE VKFFT_BACKEND=0)
     # Append the nested include path for glslang
+    target_include_directories(client_static PRIVATE "/opt/homebrew/include")
     target_include_directories(client_static PRIVATE "/opt/homebrew/include/glslang/Include")
+    target_link_directories(client_static PRIVATE /opt/homebrew/lib)
 endif ()
 
 FetchContent_GetProperties(vkfft)
@@ -131,6 +137,11 @@ if (vkfft_POPULATED)
         target_link_libraries(client_static PRIVATE Vulkan::Vulkan)
     endif ()
     #target_link_libraries(client_static PRIVATE vkfft)
+    target_link_libraries(client_static PRIVATE
+            glslang::glslang
+            glslang::SPIRV
+   )
+
 endif ()
 
 

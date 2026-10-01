@@ -29,6 +29,10 @@ RUN apt-get update && apt-get install -y \
     libavahi-core-dev \
     git \
     libvulkan-dev \
+    vulkan-tools \
+    glslang-dev \
+    glslang-tools \
+    glslc \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the inner container context path

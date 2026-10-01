@@ -12,6 +12,7 @@
 
 namespace sdrcomms {
     class FFTTransform {
+    public:
         /**
          * default ctor
          */
@@ -34,13 +35,13 @@ namespace sdrcomms {
          * @param input
          * @return
          */
-        std::vector<std::complex<float>> fft(std::vector<std::complex<float>> input);
+        std::vector<std::complex<float>> fft(const std::vector<std::complex<float> >& input);
 
     private:
         size_t fftSize;
         // calculated as fftSize * sizeof(std::complex<float>)
         size_t bufferSize;
-
+        bool isInit;
         VkApplicationInfo appInfo ;
         VkInstanceCreateInfo instance_info ;
         VkInstance instance;

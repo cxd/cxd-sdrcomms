@@ -24,6 +24,7 @@ endif()
 include_directories(${cli11_SOURCE_DIR}/include)
 
 
+
 # 1. Define the executable target framework
 add_executable(application main.cpp
         MockProcessor.cpp
@@ -35,5 +36,13 @@ set_target_properties(application PROPERTIES
         POSITION_INDEPENDENT_CODE 1
 )
 
+
+if (APPLE)
+    target_compile_definitions(application PRIVATE VKFFT_BACKEND=0)
+    # Append the nested include path for glslang
+    target_include_directories(application PRIVATE "/opt/homebrew/include")
+    target_include_directories(application PRIVATE "/opt/homebrew/include/glslang/Include")
+    target_link_directories(application PRIVATE /opt/homebrew/lib)
+endif ()
 # Core link layer: Always link against your static drawing engine target
 target_link_libraries(application PRIVATE client_static)

@@ -206,6 +206,7 @@ namespace sdrcomms {
             std::cerr << "Could not initialise the vkFFT library" << std::endl;
             return false;
         }
+        isInit = true;
         return true;
     }
 
@@ -228,7 +229,10 @@ namespace sdrcomms {
      * @param input
      * @return
      */
-    std::vector<std::complex<float> > FFTTransform::fft(std::vector<std::complex<float> > input) {
+    std::vector<std::complex<float> > FFTTransform::fft(const std::vector<std::complex<float> >& input) {
+        if (!isInit) {
+            return {};
+        }
         void* data;
         uint32_t buffer_size = bufferSize;
         vkMapMemory(device, deviceMemory, 0, buffer_size, 0, &data);

@@ -8,6 +8,8 @@
 #include "SampleProcessor.h"
 #include "IQBlock.h"
 #include <chrono>
+
+#include "FFTSampleProcessor.h"
 #include "MockProcessor.h"
 #include "SampleStreamerProcessor.h"
 
@@ -35,7 +37,7 @@ private:
 
     std::unique_ptr<MockProcessor> mockProcessor;
     std::unique_ptr<sdrcomms::SampleStreamerProcessor> sampleStreamerProcessor;
-
+    std::unique_ptr<sdrcomms::FFTSampleProcessor> fftProcessor;
 };
 
 

@@ -6,6 +6,7 @@
 #define SDRCOMMS_IQBLOCK_H
 #include <vector>
 #include <complex>
+#include <memory>
 
 namespace sdrcomms {
     class IQBlock {
@@ -21,6 +22,13 @@ namespace sdrcomms {
          */
         long long timestampMs;
         double centerFreq;
+
+        /**
+         * an inner block can be passed referenced by the outer block to support
+         * collection of transformations.
+         * The inner block is not sent over the network.
+         */
+        std::shared_ptr<IQBlock> innerBlock = nullptr;
 
     };
 } // sdrcomms
