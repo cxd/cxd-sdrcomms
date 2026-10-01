@@ -174,7 +174,7 @@ namespace sdrcomms {
         instance_info = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, nullptr, 0, &appInfo, 0, nullptr, 0, nullptr};
         res = vkCreateInstance(&instance_info, nullptr, &instance);
         if (res != VK_SUCCESS) {
-            std::cerr << "Failed to create Vulkan instance" << std::endl;
+            std::cerr << "Failed to create Vulkan instance. Error code [" << res << "]" << std::endl;
             return false;
         }
         uint32_t deviceCount = 0;
