@@ -14,17 +14,17 @@ include(FetchContent)
 FetchContent_Declare(
         soapysdr
         GIT_REPOSITORY https://github.com/pothosware/SoapySDR.git
-        GIT_TAG        master
+        GIT_TAG master
 )
 
 # CRITICAL FIX A: Inform the build system that SoapySDR is active inside this source tree.
 # This prevents it from escaping out to /opt/homebrew configurations.
 FetchContent_GetProperties(soapysdr)
-if(NOT soapysdr_POPULATED)
+if (NOT soapysdr_POPULATED)
     FetchContent_Populate(soapysdr)
     set(SOAPY_SDR_IN_TREE_SOURCE_DIR "${soapysdr_SOURCE_DIR}" CACHE INTERNAL "")
     add_subdirectory(${soapysdr_SOURCE_DIR} ${soapysdr_BINARY_DIR})
-endif()
+endif ()
 
 # CRITICAL FIX B: Tell subsequent dependencies (like SoapyRemote) to never check
 # global paths for SoapySDR because we have an active CMake alias target.
@@ -39,7 +39,7 @@ FetchContent_MakeAvailable(soapysdr)
 FetchContent_Declare(
         soapyremote
         GIT_REPOSITORY https://github.com/pothosware/SoapyRemote.git
-        GIT_TAG        master
+        GIT_TAG master
 )
 
 
@@ -51,6 +51,18 @@ set(CMAKE_FIND_PACKAGE_NO_SYSTEM_PACKAGE_REGISTRY ON)
 
 FetchContent_MakeAvailable(soapyremote)
 
+find_package(Vulkan REQUIRED)
+message(STATUS "Vulkan found:")
+# vKFFT
+FetchContent_Declare(
+        vkfft
+        GIT_REPOSITORY https://github.com/DTolm/VkFFT.git
+        GIT_TAG v1.3.4
+)
+FetchContent_MakeAvailable(vkfft)
+if(APPLE)
+    target_compile_definitions(VkFFT INTERFACE VKFFT_BACKEND=0)
+endif()
 
 add_library(client_static STATIC include/client.h
         client.cpp
@@ -66,24 +78,26 @@ add_library(client_static STATIC include/client.h
         SampleStreamerProcessor.cpp
         include/SampleStreamerProcessor.h
         NetIQBlock.cpp
-        include/NetIQBlock.h)
+        include/NetIQBlock.h
+        FFTTransform.cpp
+        include/FFTTransform.h)
 
 # 2. If the option is turned ON, inject a preprocessor macro into the C++ compiler
-if(ENABLE_SDR_DEBUG)
+if (ENABLE_SDR_DEBUG)
     target_compile_definitions(client_static PRIVATE CL_DEBUG_PLUTO=1)
     message(STATUS ">>> PlutoSDR Conditional Debugging: ENABLED <<<")
-endif()
+endif ()
 
 
 # 1. Manually pull the source directory variable from the fetched SoapySDR configuration
 FetchContent_GetProperties(soapysdr)
-if(soapysdr_POPULATED)
+if (soapysdr_POPULATED)
     # 2. Force export the raw header folder path downstream.
     # Use PUBLIC so it applies to both this library AND your main application target.
     target_include_directories(client_static PUBLIC
             "${soapysdr_SOURCE_DIR}/include"
     )
-endif()
+endif ()
 
 target_link_libraries(client_static PRIVATE SoapySDR)
 
@@ -96,6 +110,28 @@ set_target_properties(client_static PROPERTIES
         BUILD_RPATH "${soapysdr_BINARY_DIR}/lib"
 )
 
+if (APPLE)
+    target_compile_definitions(client_static PRIVATE VKFFT_BACKEND=0)
+    # Append the nested include path for glslang
+    target_include_directories(client_static PRIVATE "/opt/homebrew/include/glslang/Include")
+endif ()
+
+FetchContent_GetProperties(vkfft)
+if (vkfft_POPULATED)
+    target_include_directories(client_static PUBLIC
+            "${vkfft_SOURCE_DIR}/vkFFT"
+    )
+    if (APPLE)
+        target_compile_definitions(client_static PRIVATE VKFFT_BACKEND=0)
+        target_link_libraries(client_static PRIVATE "-framework Foundation" "-framework Metal")
+        target_link_libraries(client_static PRIVATE Vulkan::Vulkan)
+    elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        message(STATUS "Configure vkFFT for Vulkan backend")
+        target_compile_definitions(client_static PRIVATE VKFFT_BACKEND=0)
+        target_link_libraries(client_static PRIVATE Vulkan::Vulkan)
+    endif ()
+    #target_link_libraries(client_static PRIVATE vkfft)
+endif ()
 
 
 # Include the folder so your #include statements can locate the headers
@@ -105,9 +141,9 @@ set_target_properties(client_static PROPERTIES
         POSITION_INDEPENDENT_CODE 1
 )
 
-if(NOT APPLE AND (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64"))
+if (NOT APPLE AND (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64"))
 
-else()
+else ()
 
     message(STATUS "📥 MacOS or Linux")
 
@@ -115,8 +151,7 @@ else()
     add_compile_definitions(HAVE_XGENERICEVENTCOOKIE=1)
 
 
-endif()
-
+endif ()
 
 
 # ==============================================================================

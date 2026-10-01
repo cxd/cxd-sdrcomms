@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y \
     libad9361-dev \
     libavahi-core-dev \
     git \
+    libvulkan-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the inner container context path
