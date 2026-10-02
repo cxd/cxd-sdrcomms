@@ -289,6 +289,7 @@ namespace sdrcomms {
      */
     void FFTTransform::cleanup() {
         deleteVkFFT(&fftApp);
+        vkDestroyFence(device, fence, nullptr);
         vkFreeCommandBuffers(device, devicePool, 1, &commandBuffer);
         vkDestroyBuffer(device, deviceBuffer, nullptr);
         vkFreeMemory(device, deviceMemory, nullptr);

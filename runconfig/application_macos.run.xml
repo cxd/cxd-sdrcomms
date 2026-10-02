@@ -1,0 +1,15 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="application_macos" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="--driver-name=plutosdr --remote-driver=plutosdr --device-uri=ip:pluto.local --bind-address= --server-uri=" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="sdrcomms" TARGET_NAME="application" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="sdrcomms" RUN_TARGET_NAME="application">
+    <envs>
+      <env name="DYLD_FALLBACK_LIBRARY_PATH" value="/opt/homebrew/opt/molten-vk/lib:$DYLD_FALLBACK_LIBRARY_PATH" />
+      <env name="LD_LIBRARY_PATH" value="/opt/homebrew/lib:$LD_LIBRARY_PATH" />
+      <env name="SOAPY_SDR_PLUGIN_PATH" value="$PROJECT_DIR$/cmake-build-debug/_deps/soapypluto-build/" />
+      <env name="VK_ICD_FILENAMES" value="/opt/homebrew/etc/vulkan/icd.d/MoltenVK_icd.json" />
+      <env name="VK_DRIVER_FILES" value="/opt/homebrew/etc/vulkan/icd.d/MoltenVK_icd.json" />
+      <env name="VK_LOADER_DEBUG" value="all" />
+    </envs>
+    <method v="2">
+      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>
