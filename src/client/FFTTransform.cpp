@@ -23,20 +23,10 @@ namespace sdrcomms {
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
             std::cout << "Device Name: " << deviceProperties.deviceName << std::endl;
             if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-                VkPhysicalDeviceMemoryProperties properties;
-                vkGetPhysicalDeviceMemoryProperties(device, &properties);
-                for (size_t i = 0; i < properties.memoryTypeCount; i++) {
-                    if (properties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
-                        VkDeviceSize totalMem = 0;
-                        for (size_t j = 0; j < properties.memoryHeaps[i].size; j++) {
-                            totalMem += properties.memoryHeaps[i].size;
-                        }
-                        if (totalMem > maxVRAM) {
-                            maxVRAM = totalMem;
-                            selectedDevice = device;
-                        }
-                    }
-                }
+
+                // TODO: use the vkGetPhysicalProperties2 to obtain PCI information about device memory.
+                // https://community.khronos.org/t/vkgetphysicaldeviceproperties2-not-returning-any-data/111831
+                selectedDevice = device;
             }
         }
         return selectedDevice;
