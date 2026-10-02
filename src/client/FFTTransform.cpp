@@ -23,7 +23,6 @@ namespace sdrcomms {
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
             std::cout << "Device Name: " << deviceProperties.deviceName << std::endl;
             if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-
                 // TODO: use the vkGetPhysicalProperties2 to obtain PCI information about device memory.
                 // https://community.khronos.org/t/vkgetphysicaldeviceproperties2-not-returning-any-data/111831
                 selectedDevice = device;
@@ -39,7 +38,7 @@ namespace sdrcomms {
         uint32_t queueCount = 0;
         queueFamilyIndex = -1;
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, nullptr);
-        std::vector<VkQueueFamilyProperties> queues{};
+        std::vector<VkQueueFamilyProperties> queues{queueCount};
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, queues.data());
         for (uint32_t i = 0; i < queueCount; i++) {
             if (queues[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
@@ -118,6 +117,17 @@ namespace sdrcomms {
         return true;
     }
 
+
+    bool FFTTransform::createFence() {
+        VkFenceCreateInfo fence_info {};
+        fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fence_info.flags = 0;
+        if (vkCreateFence(device, &fence_info, nullptr, &fence) != VK_SUCCESS) {
+            return false;
+        }
+        return true;
+    }
+
     bool FFTTransform::createFFTApplication() {
         fftConfig.physicalDevice = &physicalDevice;
         fftConfig.device = &device;
@@ -125,9 +135,19 @@ namespace sdrcomms {
         fftConfig.commandPool = &devicePool;
         fftConfig.FFTdim = 1;
         fftConfig.size[0] = fftSize;
+        fftConfig.size[1] = 1;
+        fftConfig.size[2] = 1;
+        fftConfig.fence = &fence;
+
+        // assign buffer
         VkBuffer *inputOutputBuffers = {&deviceBuffer};
         fftConfig.buffer = inputOutputBuffers;
-        if (initializeVkFFT(&fftApp, fftConfig) != VKFFT_SUCCESS) {
+        VkDeviceSize buffer_size = fftSize * sizeof(float);
+        fftConfig.bufferSize = &buffer_size;
+        // init application
+        VkFFTResult res = initializeVkFFT(&fftApp, fftConfig);
+        if (res != VKFFT_SUCCESS) {
+            std::cerr << "Could not initialise VkFFT Result = " << res << std::endl;
             return false;
         }
         return true;
@@ -159,8 +179,33 @@ namespace sdrcomms {
         this->bufferSize = fftSize * sizeof(std::complex<float>);
 
         VkResult res = VK_SUCCESS;
-        appInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO, nullptr, "SDRCOMMS", 1, "No Engine", 1, VK_API_VERSION_1_2};
-        instance_info = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, nullptr, 0, &appInfo, 0, nullptr, 0, nullptr};
+        appInfo = {
+            VK_STRUCTURE_TYPE_APPLICATION_INFO,
+            nullptr,
+            "SDRCOMMS",
+            1,
+            "No Engine",
+            1,
+            VK_API_VERSION_1_2
+        };
+        instance_info = {
+            VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+            nullptr,
+            0,
+            &appInfo,
+            0,
+            nullptr,
+            0,
+            nullptr
+        };
+        // enable portability extensions.
+        instance_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+        std::vector<const char*> instance_extensions = {
+            "VK_KHR_portability_enumeration" // Match the native literal macro
+        };
+        instance_info.enabledExtensionCount = instance_extensions.size();
+        instance_info.ppEnabledExtensionNames = instance_extensions.data();
+        // create instance.
         res = vkCreateInstance(&instance_info, nullptr, &instance);
         if (res != VK_SUCCESS) {
             std::cerr << "Failed to create Vulkan instance. Error code [" << res << "]" << std::endl;
@@ -191,6 +236,14 @@ namespace sdrcomms {
             std::cerr << "Could not allocate VK device buffer" << std::endl;
             return false;
         }
+        if (!createCommandBuffer()) {
+            std::cerr << "Could not create command buffer" << std::endl;
+            return false;
+        }
+        if (!createFence()) {
+            std::cerr << "Failed to create Vulken Fence" << std::endl;
+            return false;
+        }
         if (!createFFTApplication()) {
             std::cerr << "Could not initialise the vkFFT library" << std::endl;
             return false;
@@ -218,11 +271,11 @@ namespace sdrcomms {
      * @param input
      * @return
      */
-    std::vector<std::complex<float> > FFTTransform::fft(const std::vector<std::complex<float> >& input) {
+    std::vector<std::complex<float> > FFTTransform::fft(const std::vector<std::complex<float> > &input) {
         if (!isInit) {
             return {};
         }
-        void* data;
+        void *data;
         uint32_t buffer_size = bufferSize;
         vkMapMemory(device, deviceMemory, 0, buffer_size, 0, &data);
         std::memcpy(data, input.data(), buffer_size);

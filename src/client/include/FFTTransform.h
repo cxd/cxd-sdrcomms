@@ -54,6 +54,7 @@ namespace sdrcomms {
         VkBuffer deviceBuffer;
         VkDeviceMemory deviceMemory;
         VkCommandBuffer commandBuffer;
+        VkFence fence;
 
         VkFFTApplication fftApp {};
         VkFFTConfiguration fftConfig {};
@@ -70,6 +71,8 @@ namespace sdrcomms {
         bool createDeviceBuffer();
 
         bool createCommandBuffer();
+
+        bool createFence();
 
         bool createFFTApplication();
 
