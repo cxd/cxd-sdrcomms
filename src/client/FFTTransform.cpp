@@ -5,9 +5,8 @@
 #include "FFTTransform.h"
 
 #include <iostream>
-
-#include "../../../../../../../opt/homebrew/include/vulkan/vulkan_core.h"
-#include "../../cmake-build-debug/_deps/vkfft-src/benchmark_scripts/vkFFT_scripts/include/utils_VkFFT.h"
+#include <cstring>
+#include "vulkan/vulkan_core.h"
 
 namespace sdrcomms {
     /**

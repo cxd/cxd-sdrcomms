@@ -7,6 +7,8 @@
 #include <iostream>
 #include <sstream>
 #include <thread>
+#include <algorithm>
+#include <cstring>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>

@@ -117,9 +117,12 @@ set_target_properties(client_static PROPERTIES
 if (APPLE)
     target_compile_definitions(client_static PRIVATE VKFFT_BACKEND=0)
     # Append the nested include path for glslang
-    target_include_directories(client_static PRIVATE "/opt/homebrew/include")
-    target_include_directories(client_static PRIVATE "/opt/homebrew/include/glslang/Include")
-    target_link_directories(client_static PRIVATE /opt/homebrew/lib)
+    target_include_directories(client_static PUBLIC "/opt/homebrew/include")
+    target_include_directories(client_static PUBLIC "/opt/homebrew/include/glslang/Include")
+    target_link_directories(client_static PUBLIC /opt/homebrew/lib)
+else()
+    target_include_directories(client_static PUBLIC /usr/include)
+    target_include_directories(client_static PUBLIC /usr/include/glslang/Include/)
 endif ()
 
 FetchContent_GetProperties(vkfft)
@@ -130,14 +133,16 @@ if (vkfft_POPULATED)
     if (APPLE)
         target_compile_definitions(client_static PRIVATE VKFFT_BACKEND=0)
         target_link_libraries(client_static PRIVATE "-framework Foundation" "-framework Metal")
-        target_link_libraries(client_static PRIVATE Vulkan::Vulkan)
+        target_link_libraries(client_static PUBLIC Vulkan::Vulkan)
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         message(STATUS "Configure vkFFT for Vulkan backend")
+
+
         target_compile_definitions(client_static PRIVATE VKFFT_BACKEND=0)
-        target_link_libraries(client_static PRIVATE Vulkan::Vulkan)
+        target_link_libraries(client_static PUBLIC Vulkan::Vulkan)
     endif ()
     #target_link_libraries(client_static PRIVATE vkfft)
-    target_link_libraries(client_static PRIVATE
+    target_link_libraries(client_static PUBLIC
             glslang::glslang
             glslang::SPIRV
    )
