@@ -41,6 +41,8 @@ namespace sdrcomms {
         size_t fftSize;
         // calculated as fftSize * sizeof(std::complex<float>)
         size_t bufferSize;
+        // optional GPU mask which can be supplied to choose the PCI bus id.
+        int gpuPciBus = -1;
         bool isInit;
         VkApplicationInfo appInfo ;
         VkInstanceCreateInfo instance_info ;

@@ -19,13 +19,36 @@ namespace sdrcomms {
         VkDeviceSize maxVRAM = 0;
         for (size_t deviceIdx = 0; deviceIdx < devices.size(); deviceIdx++) {
             auto device = devices[deviceIdx];
-            VkPhysicalDeviceProperties deviceProperties;
-            vkGetPhysicalDeviceProperties(device, &deviceProperties);
-            std::cout << "Device Name: " << deviceProperties.deviceName << std::endl;
-            if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+            VkPhysicalDevicePCIBusInfoPropertiesEXT pciBusInfo{};
+            pciBusInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PCI_BUS_INFO_PROPERTIES_EXT;
+            VkPhysicalDeviceProperties2 deviceProperties;
+            deviceProperties.pNext = &pciBusInfo;
+            deviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+            vkGetPhysicalDeviceProperties2(device, &deviceProperties);
+            std::cout << "Device Name: " << deviceProperties.properties.deviceName << std::endl;
+
+            if (deviceProperties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
                 // TODO: use the vkGetPhysicalProperties2 to obtain PCI information about device memory.
                 // https://community.khronos.org/t/vkgetphysicaldeviceproperties2-not-returning-any-data/111831
-                selectedDevice = device;
+
+                if (gpuPciBus >= 0 && pciBusInfo.pciBus == gpuPciBus) {
+                    selectedDevice = device;
+                    break;
+                }
+
+                VkPhysicalDeviceMemoryProperties memProps;
+                vkGetPhysicalDeviceMemoryProperties(device, &memProps);
+
+                VkDeviceSize totalLocalMemory = 0;
+                for (uint32_t i = 0; i < memProps.memoryHeapCount; ++i) {
+                    if (memProps.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
+                        totalLocalMemory += memProps.memoryHeaps[i].size;
+                    }
+                }
+                if (totalLocalMemory > maxVRAM) {
+                    maxVRAM = totalLocalMemory;
+                    selectedDevice = device;
+                }
             }
         }
         return selectedDevice;
