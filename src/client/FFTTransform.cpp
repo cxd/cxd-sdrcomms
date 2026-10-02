@@ -36,7 +36,7 @@ namespace sdrcomms {
             std::cout << "Device Name: " << deviceProperties.properties.deviceName << std::endl;
 
             if (deviceProperties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-                // TODO: use the vkGetPhysicalProperties2 to obtain PCI information about device memory.
+                // use the vkGetPhysicalProperties2 to obtain PCI information about device memory.
                 // https://community.khronos.org/t/vkgetphysicaldeviceproperties2-not-returning-any-data/111831
 
                 if (gpuPciBus >= 0 && pciBusInfo.pciBus == gpuPciBus) {
