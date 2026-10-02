@@ -25,6 +25,14 @@ namespace sdrcomms {
             deviceProperties.pNext = &pciBusInfo;
             deviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
             vkGetPhysicalDeviceProperties2(device, &deviceProperties);
+
+            // avoid selecting software renderers if possible.
+            std::string deviceName = deviceProperties.properties.deviceName;
+            if (deviceName.find("llvmpipe") != std::string::npos ||
+                deviceName.find("softpipe") != std::string::npos) {
+                continue;
+            }
+
             std::cout << "Device Name: " << deviceProperties.properties.deviceName << std::endl;
 
             if (deviceProperties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
