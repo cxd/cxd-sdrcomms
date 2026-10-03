@@ -122,7 +122,7 @@ namespace sdrcomms {
                     it->heartbeat = std::chrono::steady_clock::now();
                     std::atomic_store(&active_clients, copy_active);
                 }
-            } else if (command == "CLOSE") {
+            } else if (command == "CLOSE" || command == "UNREG") {
                 NetClient client{client_addr, std::chrono::steady_clock::now() };
                 remove_client(client);
             }

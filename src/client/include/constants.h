@@ -58,6 +58,11 @@ namespace sdrcomms {
      */
     const int UDP_CLIENT_STREAM_TIMEOUT = 60;
 
+    /**
+     * connected clients send a heartbeat every 5 seconds.
+     */
+    const int HEARTBEAT_MS = 5000;
+
 }
 
 #endif //SDRCOMMS_CONTANTS_H

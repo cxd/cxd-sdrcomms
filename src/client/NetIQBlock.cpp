@@ -24,8 +24,8 @@ namespace sdrcomms {
     bool NetIQBlock::serialize(std::ostream& out) {
         BinaryIO::write_header(out);
         BinaryIO::write_pod(out, this->timestampMs);
-        BinaryIO::write_pod(out, this->sample_size);
         BinaryIO::write_pod(out, this->channel);
+        BinaryIO::write_pod(out, this->sample_size);
         BinaryIO::write_pod(out, this->iqValues.size());
         for (auto sample : this->iqValues) {
             BinaryIO::write_pod(out, sample);
