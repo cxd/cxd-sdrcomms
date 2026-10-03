@@ -5,9 +5,24 @@
 #include <memory>
 #include <vector>
 #include <chrono>
-
+#include <atomic>
+#include <csignal>
+#include <unistd.h>
 #include "ApplicationProcessor.h"
 #include "MockProcessor.h"
+
+
+volatile sig_atomic_t keep_alive = 1;
+
+/**
+ * we will install the signal hanlder to capture the interrupt.
+ * @param signal
+ */
+void signal_handler(int signal) {
+    if (signal == SIGINT || signal == SIGTERM) {
+        keep_alive = 0;
+    }
+}
 
 /*
  * using argument parser CLI11
@@ -91,15 +106,19 @@ int main(int argc, char **argv) {
         std::cout << "Failed to stream data" << std::endl;
         return 1;
     }
-    std::cout << "Stream for 10 seconds" << std::endl;
-    std::chrono::steady_clock::time_point last = std::chrono::steady_clock::now();
-    // stream for 10 seconds
-    while (true) {
-        auto now = std::chrono::steady_clock::now();
-        auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - last);
-        if (delta.count() > 10000) {
-            break;
-        }
+    std::cout << "Begin Stream use Ctrl+C to exit" << std::endl;
+
+    struct sigaction sig_int_handler;
+    sig_int_handler.sa_handler = signal_handler;
+    sigemptyset(&sig_int_handler.sa_mask);
+    sig_int_handler.sa_flags = 0;
+    // register the handler for SIGINT (Ctrl+C)
+    sigaction(SIGINT, &sig_int_handler, nullptr);
+    sigaction(SIGTERM, &sig_int_handler, nullptr);
+
+    // stream until interrupted
+    while (keep_alive) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     std::cout << "Stopping stream" << std::endl;
     client.StopStreaming();
