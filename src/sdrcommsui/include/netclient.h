@@ -39,7 +39,7 @@ namespace sdrcommsui {
          * open a connection to the udp server
          * @return
          */
-        bool connect();
+        bool connect_server();
 
         /**
          * subscribe to the udp server to receive samples
@@ -67,6 +67,7 @@ namespace sdrcommsui {
         std::string udpServer;
         int port;
         int server_socket;
+
         size_t sample_size;
         sockaddr_in server_address;
         std::shared_ptr<sdrcomms::ReceiveQueue> receiveQueue;

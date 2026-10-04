@@ -36,7 +36,7 @@ namespace sdrcommsui {
      * open a connection to the udp server
      * @return
      */
-    bool NetClient::connect() {
+    bool NetClient::connect_server() {
         // already connected
         if (isConnected.load(std::memory_order_relaxed)) {
             return true;
@@ -49,8 +49,11 @@ namespace sdrcommsui {
         server_address.sin_family = AF_INET;
         server_address.sin_port = htons(port);
         inet_pton(AF_INET, udpServer.c_str(), &server_address.sin_addr);
-        isConnected.store(true, std::memory_order_relaxed);
-        return true;
+        if (connect(server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) >= 0) {
+            isConnected.store(true, std::memory_order_relaxed);
+            return true;
+        }
+        return false;
     }
 
     /**

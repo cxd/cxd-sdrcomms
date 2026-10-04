@@ -41,7 +41,7 @@ namespace sdrcommsui {
      * connect to the server
      */
     bool Display::connect() {
-        return this->netClient->connect();
+        return this->netClient->connect_server();
     }
 
     /**
