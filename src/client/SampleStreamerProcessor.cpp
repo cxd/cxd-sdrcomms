@@ -117,7 +117,7 @@ namespace sdrcomms {
             ssize_t recv_len = recvfrom(server_socket,
                                         recv_buffer,
                                         sizeof(recv_buffer) - 1,
-                                        MSG_DONTWAIT,
+                                        MSG_WAITALL, //MSG_DONTWAIT,
                                         (struct sockaddr *) &client_addr,
                                         &client_len);
             if (recv_len < 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -186,8 +186,12 @@ namespace sdrcomms {
                     // with packet buffer vector std::vector<IQSample> packet_buffer(PACKET_SAMPLES);
                     // we need a data type to hold iq values, but we also want metadata in the header.
                     //
-                    sendto(server_socket, bytes.data(), bytes.size(), 0,
-                           (struct sockaddr *) &client.address, sizeof(client.address));
+                    sendto(server_socket,
+                           bytes.data(),
+                           bytes.size(),
+                           MSG_WAITALL, // 0
+                           (struct sockaddr *) &client.address,
+                           sizeof(client.address));
                 }
             }
         }

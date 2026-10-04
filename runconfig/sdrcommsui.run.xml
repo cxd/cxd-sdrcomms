@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="sdrcommsui" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="--server-address 127.0.0.1 --udp-stream-port 45557" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="sdrcomms" TARGET_NAME="sdrcommsui" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="sdrcomms" RUN_TARGET_NAME="sdrcommsui">
+  <configuration default="false" name="sdrcommsui" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="--server-address 192.168.0.102 --udp-stream-port 45557" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="sdrcomms" TARGET_NAME="sdrcommsui" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="sdrcomms" RUN_TARGET_NAME="sdrcommsui">
     <method v="2">
       <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
     </method>

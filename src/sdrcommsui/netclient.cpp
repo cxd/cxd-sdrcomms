@@ -131,7 +131,7 @@ namespace sdrcommsui {
         size_t sent = sendto(server_socket,
             data,
             msg.size(),
-            0,
+            MSG_WAITALL, //0,
             (sockaddr*)&server_address,
             sizeof(server_address));
         if (sent < 0) {
@@ -154,7 +154,10 @@ namespace sdrcommsui {
             std::vector<uint8_t> frame(expected_bytes);
             size_t total_bytes_read = 0;
             while (total_bytes_read < expected_bytes && isSubscribed.load(std::memory_order_relaxed)) {
-                ssize_t bytes_read = recvfrom(server_socket, buffer.data(), buffer.size(), MSG_DONTWAIT, nullptr, nullptr);
+                ssize_t bytes_read = recvfrom(server_socket, buffer.data(), buffer.size(),
+                    MSG_WAITALL, //MSG_DONTWAIT,
+                    nullptr,
+                    nullptr);
                 if (bytes_read > 0) {
                     frame.insert(frame.begin() + total_bytes_read, buffer.begin(), buffer.begin() + bytes_read);
                     total_bytes_read += bytes_read;
