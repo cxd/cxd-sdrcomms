@@ -55,6 +55,7 @@ namespace sdrcomms {
         }
         sockaddr_in server_addr{};
         std::memset(&server_addr, 0, sizeof(server_addr));
+        server_addr.sin_len = sizeof(server_addr);
         server_addr.sin_family = AF_INET;
         server_addr.sin_port = htons(udpPort);
         // assign address to server.
