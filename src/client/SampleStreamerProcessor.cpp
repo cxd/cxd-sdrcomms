@@ -108,6 +108,10 @@ namespace sdrcomms {
             }
             char recv_buffer[128];
             sockaddr_in client_addr{};
+            std::memset(&client_addr, 0, sizeof(client_addr));
+#if defined(__APPLE__)
+            client_addr.sin_len = sizeof(client_addr);
+#endif
             socklen_t client_len = sizeof(client_addr);
 
             ssize_t recv_len = recvfrom(server_socket,
