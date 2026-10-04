@@ -12,11 +12,14 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+
 #include "include/constants.h"
 #include "include/NetIQBlock.h"
 
 namespace sdrcomms {
-    SampleStreamerProcessor::SampleStreamerProcessor(int udpPort) {
+    SampleStreamerProcessor::SampleStreamerProcessor(std::string udpServerAddress, int udpPort) {
+        this->udpServerAddress = udpServerAddress;
         this->udpPort = udpPort;
         this->receiveQueue = std::make_shared<ReceiveQueue>(DEFAULT_QUEUE_SIZE, REQUIRED_SAMPLES);
     }
@@ -45,7 +48,7 @@ namespace sdrcomms {
         // a client can also send a remove request to stop receiving stream data.
         // otherwise it will be removed from the list.
 
-        int server_socket = socket(AF_INET, SOCK_DGRAM, 0);
+        server_socket = socket(AF_INET, SOCK_DGRAM, 0);
         if (server_socket < 0) {
             std::cerr << "Could not create server" << std::endl;
             return;
@@ -53,8 +56,10 @@ namespace sdrcomms {
         sockaddr_in server_addr{};
         std::memset(&server_addr, 0, sizeof(server_addr));
         server_addr.sin_family = AF_INET;
-        server_addr.sin_addr.s_addr = INADDR_ANY;
         server_addr.sin_port = htons(udpPort);
+        // assign address to server.
+        inet_pton(AF_INET, udpServerAddress.c_str(), &server_addr.sin_addr);
+
         if (bind(server_socket, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
             std::cerr << "Could not bind server" << std::endl;
             close(server_socket);
@@ -66,14 +71,14 @@ namespace sdrcomms {
 
         // now we can configure the threads.
         client_thread = std::thread(
-            [this, server_socket]() {
-                this->handle_client_connections(server_socket);
+            [this]() {
+                this->handle_client_connections();
             }
         );
 
         stream_thread = std::thread(
-            [this, server_socket]() {
-                this->stream_samples(server_socket);
+            [this]() {
+                this->stream_samples();
             }
         );
     }
@@ -90,7 +95,7 @@ namespace sdrcomms {
     /**
          * wait for clients to connect
          */
-    void SampleStreamerProcessor::handle_client_connections(int server_socket) {
+    void SampleStreamerProcessor::handle_client_connections() {
         while (running.load(std::memory_order_acquire)) {
             // if adding a client.
             auto copy_active = std::atomic_load(&active_clients);
@@ -102,9 +107,18 @@ namespace sdrcomms {
             sockaddr_in client_addr{};
             socklen_t client_len = sizeof(client_addr);
 
-            ssize_t recv_len = recvfrom(server_socket, recv_buffer, sizeof(recv_buffer), MSG_DONTWAIT, (sockaddr *) &client_addr,
+            ssize_t recv_len = recvfrom(server_socket,
+                                        recv_buffer,
+                                        sizeof(recv_buffer) - 1,
+                                        MSG_DONTWAIT,
+                                        (sockaddr *) &client_addr,
                                         &client_len);
             if (recv_len < 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    //
+                } else {
+                    std::cerr << "Error receiving data: " << strerror(errno) << std::endl;
+                }
                 std::this_thread::yield();
                 continue;
             }
@@ -112,6 +126,8 @@ namespace sdrcomms {
             std::string command(recv_buffer);
             if (command == "REG") {
                 // add a client.
+                std::cout << "REG command received from " << inet_ntoa(client_addr.sin_addr) << ":" << ntohs(
+                    client_addr.sin_port) << std::endl;
                 NetClient client{client_addr, std::chrono::steady_clock::now()};
                 auto it = std::find(copy_active->begin(), copy_active->end(), client);
                 if (it == copy_active->end()) {
@@ -123,7 +139,10 @@ namespace sdrcomms {
                     std::atomic_store(&active_clients, copy_active);
                 }
             } else if (command == "CLOSE" || command == "UNREG") {
-                NetClient client{client_addr, std::chrono::steady_clock::now() };
+                std::cout << "UNREG command received from " << inet_ntoa(client_addr.sin_addr) << ":" << ntohs(
+                    client_addr.sin_port) << std::endl;
+
+                NetClient client{client_addr, std::chrono::steady_clock::now()};
                 remove_client(client);
             }
             cleanup_expired_clients();
@@ -135,7 +154,7 @@ namespace sdrcomms {
     /**
      * iterate over each client and stream samples
      */
-    void SampleStreamerProcessor::stream_samples(int server_socket) {
+    void SampleStreamerProcessor::stream_samples() {
         while (running.load(std::memory_order_acquire)) {
             if (active_clients == nullptr || active_clients->empty()) {
                 std::this_thread::yield();
@@ -147,7 +166,7 @@ namespace sdrcomms {
                 // stream data to clients.
                 // serialize the block.
                 NetIQBlock netBlock{block};
-                std::ostringstream oss {std::ios::binary};
+                std::ostringstream oss{std::ios::binary};
                 if (!netBlock.serialize(oss)) {
                     // couldn't write to the stream need to skip this block.
                     continue;
@@ -161,7 +180,7 @@ namespace sdrcomms {
                     // we need a data type to hold iq values, but we also want metadata in the header.
                     //
                     sendto(server_socket, bytes.data(), bytes.size(), 0,
-                        (struct sockaddr*)&client.address, sizeof(client.address));
+                           (struct sockaddr *) &client.address, sizeof(client.address));
                 }
             }
         }
@@ -188,7 +207,7 @@ namespace sdrcomms {
         std::atomic_store(&active_clients, new_clients);
     }
 
-    void SampleStreamerProcessor::remove_client(const NetClient& client) {
+    void SampleStreamerProcessor::remove_client(const NetClient &client) {
         if (active_clients == nullptr || active_clients->empty()) {
             return;
         }

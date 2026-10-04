@@ -10,15 +10,16 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
-
 #include "constants.h"
+#include "NetIQBlock.h"
 
 namespace sdrcommsui {
-    NetClient::NetClient(std::string udpServer, int port) {
+    NetClient::NetClient(std::string udpServer, int port, size_t sample_size) {
         this->udpServer = udpServer;
         this->port = port;
+        this->sample_size = sample_size;
         this->receiveQueue = std::make_shared<sdrcomms::ReceiveQueue>(sdrcomms::DEFAULT_QUEUE_SIZE,
-                                                                      sdrcomms::REQUIRED_SAMPLES);
+                                                                      sample_size);
         this->lastHeartbeat = std::chrono::steady_clock::now();
     }
 
@@ -37,7 +38,7 @@ namespace sdrcommsui {
      */
     bool NetClient::connect() {
         // already connected
-        if (isConnected.load(std::memory_order_acquire)) {
+        if (isConnected.load(std::memory_order_relaxed)) {
             return true;
         }
         // create the socket handle and server address struct.
@@ -48,9 +49,7 @@ namespace sdrcommsui {
         server_address.sin_family = AF_INET;
         server_address.sin_port = htons(port);
         inet_pton(AF_INET, udpServer.c_str(), &server_address.sin_addr);
-
-
-
+        isConnected.store(true, std::memory_order_relaxed);
         return true;
     }
 
@@ -126,12 +125,15 @@ namespace sdrcommsui {
          */
     void NetClient::send_msg(std::string msg) {
         const char* data = msg.c_str();
-        sendto(server_socket,
+        size_t sent = sendto(server_socket,
             data,
             msg.size(),
             0,
             (sockaddr*)&server_address,
             sizeof(server_address));
+        if (sent < 0) {
+            std::cerr << "Error sending message: " << strerror(errno) << std::endl;
+        }
     }
 
 
@@ -140,12 +142,48 @@ namespace sdrcommsui {
          * @param server_socket
          */
     void NetClient::receive_stream() {
+        // read buffer
+        std::vector<uint8_t> buffer(4096);
+
         while (isSubscribed.load(std::memory_order_relaxed)) {
-            // TODO: need to read data from the stream
-            // need to buffer the data up to expected number of samples
-            // then binary deserialize this into the payload structure
-            // and convert into IQBlock data type.
-            // then put into the receive queue.
+            // the expected bytes we need to read
+            size_t expected_bytes = sdrcomms::NetIQBlock::numBytes(this->sample_size);
+            std::vector<uint8_t> frame(expected_bytes);
+            size_t total_bytes_read = 0;
+            while (total_bytes_read < expected_bytes && isSubscribed.load(std::memory_order_relaxed)) {
+                ssize_t bytes_read = recvfrom(server_socket, buffer.data(), buffer.size(), MSG_DONTWAIT, nullptr, nullptr);
+                if (bytes_read > 0) {
+                    frame.insert(frame.begin() + total_bytes_read, buffer.begin(), buffer.begin() + bytes_read);
+                    total_bytes_read += bytes_read;
+                } else {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    }
+                }
+            }
+            // we expect this data frame to contain a NetIQBlock.
+            if (total_bytes_read == expected_bytes) {
+                // we can try and process this data.
+                try {
+                    VectorReadBuffer vectorBuffer(frame);
+                    std::istream stream(&vectorBuffer);
+                    sdrcomms::NetIQBlock netIQBlock = sdrcomms::NetIQBlock::deserialize(stream);
+                    // now we have read the NetIQBlock we need to convert it
+                    // into an IQBlock.
+                    sdrcomms::IQBlock block = netIQBlock.toIQBlock();
+
+                    std::cout << "Received IQBlock: " << block.timestampMs << std::endl;
+                    // now we can add it to our processing queue.
+                    this->receiveQueue->push(block.timestampMs,
+                        block.channel,
+                        block.samples,
+                        block.sample_size,
+                        block.centerFreq);
+                } catch (std::exception& ex) {
+                    // we cannot process this packet
+                    std::cerr << "Received invalid packet: " << ex.what() << std::endl;
+                }
+            }
 
         }
     }

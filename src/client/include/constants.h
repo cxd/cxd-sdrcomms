@@ -63,6 +63,11 @@ namespace sdrcomms {
      */
     const int HEARTBEAT_MS = 5000;
 
+    /**
+     * default UDP port
+     */
+    const int DEFAULT_UDP_PORT = 45557;
+
 }
 
 #endif //SDRCOMMS_CONTANTS_H

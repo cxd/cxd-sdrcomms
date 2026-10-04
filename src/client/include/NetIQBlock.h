@@ -34,6 +34,12 @@ namespace sdrcomms {
         bool serialize(std::ostream& out);
 
         /**
+         * convert the NetIQBlock to an IQBlock
+         * @return iqblock
+         */
+        IQBlock toIQBlock() const;
+
+        /**
          * deserialize the block from the stream.
          * @param in
          * @return
@@ -41,9 +47,18 @@ namespace sdrcomms {
         static NetIQBlock deserialize(std::istream& in);
 
         /**
+         * determine the byte size of a NetIQBlock
+         * with a given sample size
+         * @param sample_size
+         * @return
+         */
+        static size_t numBytes(size_t sample_size);
+
+        /**
          * use public fields
          */
         long long timestampMs;
+        float centerFreq;
         int channel;
         size_t sample_size;
         std::vector<IQValue> iqValues;

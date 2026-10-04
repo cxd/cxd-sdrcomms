@@ -15,7 +15,7 @@
 
 class ApplicationProcessor : public sdrcomms::SampleProcessor {
 public:
-    ApplicationProcessor(int udpPort);
+    ApplicationProcessor(std::string udpServerAddress, int udpPort);
 
     /**
      * implement the process method
@@ -33,6 +33,7 @@ public:
      */
     void stopServer();
 private:
+    std::string udpServerAddress;
     int udpPort;
 
     std::unique_ptr<MockProcessor> mockProcessor;

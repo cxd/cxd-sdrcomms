@@ -12,6 +12,14 @@
 #include <netinet/in.h>
 
 namespace sdrcommsui {
+
+    struct VectorReadBuffer : std::streambuf {
+        VectorReadBuffer(std::vector<uint8_t>& buffer) {
+            char* buffer_ptr = const_cast<char*>(reinterpret_cast<const char*>(buffer.data()));
+            setg(buffer_ptr, buffer_ptr, buffer_ptr + buffer.size());
+        }
+    };
+
     class NetClient {
     public:
         /**
@@ -19,7 +27,7 @@ namespace sdrcommsui {
          * @param udpServer
          * @param port
          */
-        NetClient(std::string udpServer, int port);
+        NetClient(std::string udpServer, int port, size_t sample_size);
 
         /**
          * accessor for the receive queue
@@ -59,6 +67,7 @@ namespace sdrcommsui {
         std::string udpServer;
         int port;
         int server_socket;
+        size_t sample_size;
         sockaddr_in server_address;
         std::shared_ptr<sdrcomms::ReceiveQueue> receiveQueue;
         std::atomic<bool> isConnected { false };

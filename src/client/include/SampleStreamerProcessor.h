@@ -32,7 +32,7 @@ namespace sdrcomms {
      */
     class SampleStreamerProcessor : public SampleProcessor {
     public:
-        SampleStreamerProcessor(int udpPort);
+        SampleStreamerProcessor(std::string udpServerAddress, int udpPort);
 
         void process(const IQBlock &block) override;
 
@@ -48,27 +48,31 @@ namespace sdrcomms {
         void stopServer();
 
     private:
+        std::string udpServerAddress;
         int udpPort;
         std::atomic<bool> hasClient {false};
         std::atomic<bool> running {false};
 
+        // internal server socket file descriptor.
+        int server_socket;
         // internal receive queue
         std::shared_ptr<ReceiveQueue> receiveQueue;
 
         // registered clients
         std::shared_ptr<std::vector<NetClient> > active_clients { std::make_shared<std::vector<NetClient>> () };
 
+
         std::thread client_thread;
         std::thread stream_thread;
         /**
          * wait for clients to connect
          */
-        void handle_client_connections(int server_socket);
+        void handle_client_connections();
 
         /**
          * iterate over each client and stream samples
          */
-        void stream_samples(int server_socket);
+        void stream_samples();
 
         /**
          * cleanup expired clients.

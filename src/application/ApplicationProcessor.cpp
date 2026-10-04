@@ -5,10 +5,11 @@
 #include "ApplicationProcessor.h"
 #include "constants.h"
 
-ApplicationProcessor::ApplicationProcessor(int udpPort) {
+ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udpPort) {
+    this->udpServerAddress = udpServerAddress;
     this->udpPort = udpPort;
     this->mockProcessor = std::make_unique<MockProcessor>();
-    this->sampleStreamerProcessor = std::make_unique<sdrcomms::SampleStreamerProcessor>(udpPort);
+    this->sampleStreamerProcessor = std::make_unique<sdrcomms::SampleStreamerProcessor>(udpServerAddress, udpPort);
     this->fftProcessor = std::make_unique<sdrcomms::FFTSampleProcessor>(sdrcomms::REQUIRED_SAMPLES, nullptr);
 }
 

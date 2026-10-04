@@ -13,6 +13,8 @@ add_executable(sdrcommsui
         main.cpp
         netclient.cpp
         include/netclient.h
+        display.cpp
+        include/display.h
 
 )
 FetchContent_GetProperties(cli11)

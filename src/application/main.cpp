@@ -46,7 +46,11 @@ int main(int argc, char **argv) {
     CLI::Option *bindOpt = app.add_option("-b,--bind-address", bindAddress,
                                           "The bind address for the remote server ie: 192.168.0.102");
 
-    int udp_stream_port = 15555;
+    std::string udpServerUri = "127.0.0.1";
+    CLI::Option *udpServerUriOpt = app.add_option("-a,--udp-server-address", udpServerUri,
+                                               "The IP Address for the UDP application server eg: 127.0.0.1");
+
+    int udp_stream_port = sdrcomms::DEFAULT_UDP_PORT;
     CLI::Option *udpStreamPortOpt = app.add_option("-p,--udp-stream-port", udp_stream_port,
                                                     "The port for the udp stream ie: 15555");
 
@@ -70,7 +74,7 @@ int main(int argc, char **argv) {
         remoteDriver = "";
     }
     if (udpStreamPortOpt->count() == 0) {
-        udp_stream_port = 15555;
+        udp_stream_port = sdrcomms::DEFAULT_UDP_PORT;
     }
     /* Example
     --server-uri="tcp://192.168.0.102:11111"
@@ -97,7 +101,7 @@ int main(int argc, char **argv) {
     }
     client.SetSampleRateMSps(sdrcomms::DEFAULT_SAMPLE_RATE_MSPS);
     client.SetCenterFrequency(sdrcomms::DEFAULT_CENTER_FREQUENCY);
-    auto processor = std::make_shared<ApplicationProcessor>(udp_stream_port);
+    auto processor = std::make_shared<ApplicationProcessor>(udpServerUri, udp_stream_port);
     // start the processor server to allow remote connections.
     processor->startServer();
 
