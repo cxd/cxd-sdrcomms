@@ -49,6 +49,8 @@ namespace sdrcomms {
         }
 
         // deep copy the data from the queue into the supplied reference.
+        dest_block.timestampMs = blocks[current_read].timestampMs;
+        dest_block.channel = blocks[current_read].channel;
         dest_block.sample_size = blocks[current_read].sample_size;
         dest_block.samples.resize(blocks[current_read].sample_size);
         dest_block.samples = blocks[current_read].samples;

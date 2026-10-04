@@ -13,6 +13,9 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <algorithm>
+#include <vector>
+#include <span>
 
 #include "include/constants.h"
 #include "include/NetIQBlock.h"
@@ -180,18 +183,24 @@ namespace sdrcomms {
                 }
                 std::string bytes = oss.str();
 
+                // break the data into chunks.
                 for (auto client: *copy_active) {
                     // stream data to client.
                     // example of streaming a struct ie: IQSample. struct IQSample { int16_t i; int16_t q; };
                     // with packet buffer vector std::vector<IQSample> packet_buffer(PACKET_SAMPLES);
                     // we need a data type to hold iq values, but we also want metadata in the header.
                     //
-                    sendto(server_socket,
-                           bytes.data(),
-                           bytes.size(),
-                           MSG_WAITALL, // 0
-                           (struct sockaddr *) &client.address,
-                           sizeof(client.address));
+                    for (size_t i=0; i < bytes.size(); i+= UDP_BYTES_PER_CHUNK) {
+                        size_t chunk_size = std::min(static_cast<size_t>(UDP_BYTES_PER_CHUNK), bytes.size() - i);
+                        auto chunk = bytes.substr(i, chunk_size);
+                        sendto(server_socket,
+                               chunk.data(),
+                               chunk.size(),
+                               0, // MSG_WAITALL
+                               (struct sockaddr *) &client.address,
+                               sizeof(client.address));
+                    }
+
                 }
             }
         }

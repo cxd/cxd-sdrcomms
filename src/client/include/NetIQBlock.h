@@ -47,6 +47,13 @@ namespace sdrcomms {
         static NetIQBlock deserialize(std::istream& in);
 
         /**
+         * read only the header
+         * @param in
+         * @return
+         */
+        static NetIQBlock read_header(std::istream& in);
+
+        /**
          * determine the byte size of a NetIQBlock
          * with a given sample size
          * @param sample_size
@@ -55,12 +62,20 @@ namespace sdrcomms {
         static size_t numBytes(size_t sample_size);
 
         /**
+         * get the size of the header
+         * @return
+         */
+        static size_t headerSize();
+
+        /**
          * use public fields
          */
         long long timestampMs;
         float centerFreq;
         int channel;
         size_t sample_size;
+        // actual number of samples.
+        size_t num_samples;
         std::vector<IQValue> iqValues;
 
     };

@@ -99,7 +99,7 @@ namespace sdrcomms {
         std::atomic<double> bandwidth;
 
         // after changing hardware configuration eg frequency, we should discard this many blocks
-        std::atomic<int> dropBlocks{2};
+        std::atomic<int> dropBlocks{10 };
 
         /**
          * default sample rate for streaming

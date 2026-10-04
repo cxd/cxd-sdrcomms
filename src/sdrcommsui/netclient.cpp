@@ -131,7 +131,7 @@ namespace sdrcommsui {
         size_t sent = sendto(server_socket,
             data,
             msg.size(),
-            MSG_WAITALL, //0,
+            0, // MSG_WAITALL
             (sockaddr*)&server_address,
             sizeof(server_address));
         if (sent < 0) {
@@ -149,13 +149,13 @@ namespace sdrcommsui {
         std::vector<uint8_t> buffer(4096);
 
         while (isSubscribed.load(std::memory_order_relaxed)) {
-            // the expected bytes we need to read
-            size_t expected_bytes = sdrcomms::NetIQBlock::numBytes(this->sample_size);
-            std::vector<uint8_t> frame(expected_bytes);
+            // the expected bytes we need to read the header.
+            size_t expected_bytes = sdrcomms::NetIQBlock::headerSize();
+            std::vector<uint8_t> frame {};
             size_t total_bytes_read = 0;
             while (total_bytes_read < expected_bytes && isSubscribed.load(std::memory_order_relaxed)) {
                 ssize_t bytes_read = recvfrom(server_socket, buffer.data(), buffer.size(),
-                    MSG_WAITALL, //MSG_DONTWAIT,
+                    MSG_WAITALL, //0,
                     nullptr,
                     nullptr);
                 if (bytes_read > 0) {
@@ -168,14 +168,37 @@ namespace sdrcommsui {
                 }
             }
             // we expect this data frame to contain a NetIQBlock.
-            if (total_bytes_read == expected_bytes) {
+            if (total_bytes_read >= expected_bytes) {
                 // we can try and process this data.
                 try {
                     VectorReadBuffer vectorBuffer(frame);
                     std::istream stream(&vectorBuffer);
-                    sdrcomms::NetIQBlock netIQBlock = sdrcomms::NetIQBlock::deserialize(stream);
+                    sdrcomms::NetIQBlock netIQBlock = sdrcomms::NetIQBlock::read_header(stream);
+                    // get the remaining bytes we expect to read.
+                    size_t remaining_bytes = netIQBlock.sample_size * sizeof(sdrcomms::IQValue);
+                    expected_bytes += remaining_bytes;
+                    // read the remaining bytes
+                    while (total_bytes_read < expected_bytes && isSubscribed.load(std::memory_order_relaxed)) {
+                        ssize_t bytes_read = recvfrom(server_socket, buffer.data(), buffer.size(),
+                            MSG_WAITALL, //0,
+                            nullptr,
+                            nullptr);
+                        if (bytes_read > 0) {
+                            frame.insert(frame.begin() + total_bytes_read, buffer.begin(), buffer.begin() + bytes_read);
+                            total_bytes_read += bytes_read;
+                        } else {
+                            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                            }
+                        }
+                    }
+
+
                     // now we have read the NetIQBlock we need to convert it
                     // into an IQBlock.
+                    VectorReadBuffer vectorBuffer2(frame);
+                    std::istream stream2(&vectorBuffer2);
+                    netIQBlock = sdrcomms::NetIQBlock::deserialize(stream2);
                     sdrcomms::IQBlock block = netIQBlock.toIQBlock();
 
                     std::cout << "Received IQBlock: " << block.timestampMs << std::endl;
@@ -185,9 +208,10 @@ namespace sdrcommsui {
                         block.samples,
                         block.sample_size,
                         block.centerFreq);
+
                 } catch (std::exception& ex) {
                     // we cannot process this packet
-                    std::cerr << "Received invalid packet: " << ex.what() << std::endl;
+                    //std::cerr << "Received invalid packet: " << ex.what() << std::endl;
                 }
             }
 

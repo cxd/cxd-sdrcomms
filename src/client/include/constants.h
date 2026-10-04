@@ -68,6 +68,12 @@ namespace sdrcomms {
      */
     const int DEFAULT_UDP_PORT = 45557;
 
+    /**
+     * practical limits of amount of UDP data to send
+     * per chunk.
+     */
+    const int UDP_BYTES_PER_CHUNK = 1024;
+
 }
 
 #endif //SDRCOMMS_CONTANTS_H

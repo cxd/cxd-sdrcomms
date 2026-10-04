@@ -187,7 +187,7 @@ namespace sdrcomms {
         for (int i = 0; i < numChannels; i++) {
             device->setFrequency(SOAPY_SDR_RX, i, frequency);
         }
-        dropBlocks.store(2, std::memory_order_relaxed);
+        dropBlocks.store(10, std::memory_order_relaxed);
     }
 
 
@@ -371,6 +371,9 @@ namespace sdrcomms {
                     std::this_thread::yield();
                     ++attempt;
                 }
+                // reset samples read
+                samples_read = 0;
+                dest.clear();
                 if (attempt > 5) {
                     std::cerr << "[" << channel << "] Failed to push data to queue after multiple attempts." <<
                             std::endl;
