@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     CLI::Option *bindOpt = app.add_option("-b,--bind-address", bindAddress,
                                           "The bind address for the remote server ie: 192.168.0.102");
 
-    std::string udpServerUri = "127.0.0.1";
+    std::string udpServerUri = "0.0.0.0";
     CLI::Option *udpServerUriOpt = app.add_option("-a,--udp-server-address", udpServerUri,
                                                "The IP Address for the UDP application server eg: 127.0.0.1");
 

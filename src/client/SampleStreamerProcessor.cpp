@@ -103,7 +103,7 @@ namespace sdrcomms {
                 std::this_thread::yield();
                 continue;
             }
-            char recv_buffer[16];
+            char recv_buffer[128];
             sockaddr_in client_addr{};
             socklen_t client_len = sizeof(client_addr);
 
@@ -111,15 +111,15 @@ namespace sdrcomms {
                                         recv_buffer,
                                         sizeof(recv_buffer) - 1,
                                         MSG_DONTWAIT,
-                                        (sockaddr *) &client_addr,
+                                        (struct sockaddr *) &client_addr,
                                         &client_len);
             if (recv_len < 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    //
+                    // expected
                 } else {
                     std::cerr << "Error receiving data: " << strerror(errno) << std::endl;
                 }
-                std::this_thread::yield();
+                std::this_thread::sleep_for(std::chrono::microseconds(200));
                 continue;
             }
             recv_buffer[recv_len] = '\0';

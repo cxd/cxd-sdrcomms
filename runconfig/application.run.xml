@@ -2,6 +2,7 @@
   <configuration default="false" name="application" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="--server-uri=tcp://127.0.0.1:11111 --driver-name=remote --remote-driver=plutosdr --device-uri=ip:pluto.local --bind-address=127.0.0.1" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="sdrcomms" TARGET_NAME="application" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="sdrcomms" RUN_TARGET_NAME="application">
     <envs>
       <env name="SOAPY_SDR_PLUGIN_PATH" value="$PROJECT_DIR$/cmake-build-debug/_deps/soapyremote-build/client" />
+      <env name="VK_LOADER_DEBUG" value="all" />
     </envs>
     <method v="2">
       <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
