@@ -4,12 +4,15 @@
 
 #include "include/netclient.h"
 
+#include <algorithm>
 #include <thread>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
+
+#include "ChunkHeader.h"
 #include "constants.h"
 #include "NetIQBlock.h"
 
@@ -49,7 +52,7 @@ namespace sdrcommsui {
         server_address.sin_family = AF_INET;
         server_address.sin_port = htons(port);
         inet_pton(AF_INET, udpServer.c_str(), &server_address.sin_addr);
-        if (connect(server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) >= 0) {
+        if (connect(server_socket, (struct sockaddr *) &server_address, sizeof(server_address)) >= 0) {
             isConnected.store(true, std::memory_order_relaxed);
             return true;
         }
@@ -73,10 +76,10 @@ namespace sdrcommsui {
 
             // setup the threads
             receive_thread = std::thread([this]() {
-               this->receive_stream();
+                this->receive_stream();
             });
             heartbeat_thread = std::thread([this]() {
-               this->heartbeat();
+                this->heartbeat();
             });
 
             return true;
@@ -127,13 +130,13 @@ namespace sdrcommsui {
          * send a control message
          */
     void NetClient::send_msg(std::string msg) {
-        const char* data = msg.c_str();
+        const char *data = msg.c_str();
         size_t sent = sendto(server_socket,
-            data,
-            msg.size(),
-            0, // MSG_WAITALL
-            (sockaddr*)&server_address,
-            sizeof(server_address));
+                             data,
+                             msg.size(),
+                             0, // MSG_WAITALL
+                             (sockaddr *) &server_address,
+                             sizeof(server_address));
         if (sent < 0) {
             std::cerr << "Error sending message: " << strerror(errno) << std::endl;
         }
@@ -145,76 +148,101 @@ namespace sdrcommsui {
          * @param server_socket
          */
     void NetClient::receive_stream() {
-        // read buffer
-        std::vector<uint8_t> buffer(4096);
-
+        // chunk buffer
+        size_t chunk_header_size = sdrcomms::ChunkHeader::getBytesize();
+        std::vector<uint8_t> chunk_header_buffer(chunk_header_size);
+        size_t total_bytes_read = 0;
+        bool start_frame = false;
+        // collect received frames to reorder.
+        std::vector<FrameChunk> frame_chunks{};
         while (isSubscribed.load(std::memory_order_relaxed)) {
-            // the expected bytes we need to read the header.
-            size_t expected_bytes = sdrcomms::NetIQBlock::headerSize();
-            std::vector<uint8_t> frame {};
-            size_t total_bytes_read = 0;
-            while (total_bytes_read < expected_bytes && isSubscribed.load(std::memory_order_relaxed)) {
-                ssize_t bytes_read = recvfrom(server_socket, buffer.data(), buffer.size(),
-                    MSG_WAITALL, //0,
-                    nullptr,
-                    nullptr);
-                if (bytes_read > 0) {
-                    frame.insert(frame.begin() + total_bytes_read, buffer.begin(), buffer.begin() + bytes_read);
-                    total_bytes_read += bytes_read;
-                } else {
-                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    }
-                }
-            }
-            // we expect this data frame to contain a NetIQBlock.
-            if (total_bytes_read >= expected_bytes) {
-                // we can try and process this data.
+            // we need to collect data into a frame that will eventually be parsed into a chunk.
+            // the first thing we need to do is read the chunk_header and parse it.
+            ssize_t bytes_read = recvfrom(server_socket,
+                                          chunk_header_buffer.data(),
+                                          chunk_header_buffer.size(),
+                                          MSG_WAITALL, //0,
+                                          nullptr,
+                                          nullptr);
+            sdrcomms::ChunkHeader chunk_header{};
+            if (bytes_read > 0 && bytes_read == chunk_header_size) {
                 try {
-                    VectorReadBuffer vectorBuffer(frame);
-                    std::istream stream(&vectorBuffer);
-                    sdrcomms::NetIQBlock netIQBlock = sdrcomms::NetIQBlock::read_header(stream);
-                    // get the remaining bytes we expect to read.
-                    size_t remaining_bytes = netIQBlock.sample_size * sizeof(sdrcomms::IQValue);
-                    expected_bytes += remaining_bytes;
-                    // read the remaining bytes
-                    while (total_bytes_read < expected_bytes && isSubscribed.load(std::memory_order_relaxed)) {
-                        ssize_t bytes_read = recvfrom(server_socket, buffer.data(), buffer.size(),
-                            MSG_WAITALL, //0,
-                            nullptr,
-                            nullptr);
-                        if (bytes_read > 0) {
-                            frame.insert(frame.begin() + total_bytes_read, buffer.begin(), buffer.begin() + bytes_read);
-                            total_bytes_read += bytes_read;
-                        } else {
-                            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                            }
-                        }
-                    }
-
-
-                    // now we have read the NetIQBlock we need to convert it
-                    // into an IQBlock.
-                    VectorReadBuffer vectorBuffer2(frame);
-                    std::istream stream2(&vectorBuffer2);
-                    netIQBlock = sdrcomms::NetIQBlock::deserialize(stream2);
-                    sdrcomms::IQBlock block = netIQBlock.toIQBlock();
-
-                    std::cout << "Received IQBlock: " << block.timestampMs << std::endl;
-                    // now we can add it to our processing queue.
-                    this->receiveQueue->push(block.timestampMs,
-                        block.channel,
-                        block.samples,
-                        block.sample_size,
-                        block.centerFreq);
-
-                } catch (std::exception& ex) {
-                    // we cannot process this packet
-                    //std::cerr << "Received invalid packet: " << ex.what() << std::endl;
+                    // we deserialize the chunk header.
+                    VectorReadBuffer chunkBuffer(chunk_header_buffer);
+                    std::istream chunkStream(&chunkBuffer);
+                    chunk_header = sdrcomms::ChunkHeader::deserialize(chunkStream);
+                } catch (std::exception &ex) {
+                    continue;
+                }
+            } else {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                }
+                continue;
+            }
+            if (chunk_header.chunk_index == 0) {
+                total_bytes_read = 0;
+                frame_chunks.clear();
+                start_frame = true;
+            }
+            if (!start_frame && chunk_header.chunk_index > 0) {
+                continue;
+            }
+            // if we have a chunk header we can consume the remaining bytes
+            // the expected bytes we need to read the header.
+            size_t expected_bytes = chunk_header.getPayloadByteSize();
+            // read buffer
+            std::vector<uint8_t> buffer(expected_bytes);
+            bytes_read = recvfrom(server_socket,
+                                  buffer.data(),
+                                  buffer.size(),
+                                  MSG_WAITALL, //0,
+                                  nullptr,
+                                  nullptr);
+            if (bytes_read > 0) {
+                std::vector<uint8_t> frame{};
+                frame.insert(frame.end(), buffer.begin(), buffer.begin() + bytes_read);
+                FrameChunk chunk;
+                chunk.chunk_index = chunk_header.chunk_index;
+                chunk.total_chunks = chunk_header.chunk_count;
+                chunk.data = std::move(frame);
+                frame_chunks.push_back(std::move(chunk));
+                total_bytes_read += bytes_read;
+            } else {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 }
             }
-
+            // in the future we may need to reorder chunks based on index.
+            // have we read the last expected chunk?
+            if (chunk_header.chunk_index == chunk_header.chunk_count - 1) {
+                try {
+                    // we need to deserialize the frame.
+                    // First order all frame chunks by index.
+                    std::ranges::sort(frame_chunks, [](const FrameChunk& a, const FrameChunk& b) {
+                        return a.chunk_index < b.chunk_index;
+                    });
+                    // now we want to create the full frame from the received chunks.
+                    std::vector<uint8_t> frame;
+                    for (const auto& chunk : frame_chunks) {
+                        frame.insert(frame.end(), chunk.data.begin(), chunk.data.end());
+                    }
+                    // deserialize the frame.
+                    VectorReadBuffer frameBuffer(frame);
+                    std::istream frameStream(&frameBuffer);
+                    sdrcomms::NetIQBlock block = sdrcomms::NetIQBlock::deserialize(frameStream);
+                    sdrcomms::IQBlock iqBlock = block.toIQBlock();
+                    if (block.timestampMs != 0 && iqBlock.samples.size() > 0) {
+                        this->receiveQueue->push(iqBlock.timestampMs,
+                                                 iqBlock.channel,
+                                                 iqBlock.samples,
+                                                 iqBlock.samples.size(),
+                                                 iqBlock.centerFreq);
+                    }
+                } catch (std::exception &ex) {
+                    //
+                }
+            }
         }
     }
 

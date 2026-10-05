@@ -20,6 +20,15 @@ namespace sdrcommsui {
         }
     };
 
+    /**
+     * a frame chunk to support reordering received data.
+     */
+    struct FrameChunk {
+        int chunk_index;
+        int total_chunks;
+        std::vector<uint8_t> data;
+    };
+
     class NetClient {
     public:
         /**

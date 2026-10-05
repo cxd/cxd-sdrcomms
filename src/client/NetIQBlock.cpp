@@ -4,17 +4,21 @@
 
 #include "include/NetIQBlock.h"
 #include "include/BinaryIO.h"
-namespace sdrcomms {
 
-    NetIQBlock::NetIQBlock(const IQBlock& block) {
+namespace sdrcomms {
+    NetIQBlock::NetIQBlock(const IQBlock &block) {
         this->timestampMs = block.timestampMs;
         this->sample_size = block.samples.size();
         this->centerFreq = block.centerFreq;
         this->channel = block.channel;
         this->iqValues.resize(block.samples.size());
         this->num_samples = block.samples.size();
-        for (auto sample : block.samples) {
-            this->iqValues.push_back( IQValue {sample.real(), sample.imag()});
+        for (int i = 0; i < block.samples.size(); i++) {
+            std::complex<float> sample = block.samples[i];
+            this->iqValues[i] = IQValue{
+                .real = sample.real(),
+                .imag = sample.imag()
+            };
         }
     }
 
@@ -23,14 +27,16 @@ namespace sdrcomms {
          * @return iqblock
          */
     IQBlock NetIQBlock::toIQBlock() const {
-        IQBlock block {};
+        IQBlock block{};
         block.timestampMs = this->timestampMs;
         block.centerFreq = this->centerFreq;
         block.sample_size = this->sample_size;
         block.channel = this->channel;
+        block.samples.resize(this->iqValues.size());
 
-        for (auto sample : this->iqValues) {
-            block.samples.push_back(std::complex<float>(sample.real, sample.imag));
+        for (size_t i = 0; i < this->iqValues.size(); i++) {
+            auto sample = this->iqValues[i];
+            block.samples[i] = std::complex<float>(sample.real, sample.imag);
         }
         return block;
     }
@@ -42,18 +48,18 @@ namespace sdrcomms {
      * @return
      * TODO: investigate serializing the iq values.
      */
-    bool NetIQBlock::serialize(std::ostream& out) {
+    bool NetIQBlock::serialize(std::ostream &out) {
         BinaryIO::write_header(out);
         BinaryIO::write_pod(out, this->timestampMs);
         BinaryIO::write_pod(out, this->channel);
         BinaryIO::write_pod(out, this->centerFreq);
         BinaryIO::write_pod(out, this->sample_size);
         // num samples
-        int numSamples = this->iqValues.size();
+        size_t numSamples = this->iqValues.size();
         this->num_samples = numSamples;
         BinaryIO::write_pod(out, numSamples);
-        for (auto sample : this->iqValues) {
-            BinaryIO::write_pod(out, sample);
+        for (auto sample: this->iqValues) {
+            sample.serialize(out);
         }
 
         return true;
@@ -64,8 +70,8 @@ namespace sdrcomms {
          * @param in
          * @return
          */
-    NetIQBlock NetIQBlock::deserialize(std::istream& in) {
-        NetIQBlock block {};
+    NetIQBlock NetIQBlock::deserialize(std::istream &in) {
+        NetIQBlock block{};
         BinaryIO::read_header(in);
         long long ts;
         size_t sample_size;
@@ -84,9 +90,8 @@ namespace sdrcomms {
         BinaryIO::read_pod(in, numsamples);
         block.num_samples = numsamples;
         block.iqValues.resize(numsamples);
-        for (size_t i=0; i<numsamples;i++) {
-            IQValue sample;
-            BinaryIO::read_pod(in, sample);
+        for (size_t i = 0; i < numsamples; i++) {
+            const IQValue sample = IQValue::deserialize(in);
             block.iqValues[i] = sample;
         }
         return block;
@@ -100,7 +105,7 @@ namespace sdrcomms {
          */
     size_t NetIQBlock::numBytes(size_t sample_size) {
         // header contains uint32_t MAGIC and VERSION
-        size_t num_bytes = sizeof(uint32_t)*2;
+        size_t num_bytes = BinaryIO::header_byte_size();
         // timestampMs
         num_bytes += sizeof(long long);
         // channel
@@ -121,8 +126,8 @@ namespace sdrcomms {
          * @param in
          * @return
          */
-    NetIQBlock NetIQBlock::read_header(std::istream& in) {
-        NetIQBlock block {};
+    NetIQBlock NetIQBlock::read_header(std::istream &in) {
+        NetIQBlock block{};
         BinaryIO::read_header(in);
         long long ts;
         size_t sample_size;
@@ -143,14 +148,13 @@ namespace sdrcomms {
     }
 
 
-
     /**
      * get the size of the header
      * @return
      */
     size_t NetIQBlock::headerSize() {
         // header contains uint32_t MAGIC and VERSION
-        size_t num_bytes = sizeof(uint32_t)*2;
+        size_t num_bytes = sizeof(uint32_t) * 2;
         // timestampMs
         num_bytes += sizeof(long long);
         // channel
@@ -163,5 +167,4 @@ namespace sdrcomms {
         num_bytes += sizeof(size_t);
         return num_bytes;
     }
-
 } // sdrcomms

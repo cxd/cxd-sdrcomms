@@ -17,6 +17,20 @@ namespace sdrcomms {
     struct IQValue {
         float real;
         float imag;
+
+        bool serialize(std::ostream &out) {
+            BinaryIO::write_pod(out, real);
+            BinaryIO::write_pod(out, imag);
+            return true;
+        }
+
+        static IQValue deserialize(std::istream &in) {
+            float re, im;
+            BinaryIO::read_pod(in, re);
+            BinaryIO::read_pod(in, im);
+            const IQValue iq { re, im };
+            return iq;
+        }
     };
 
     class NetIQBlock {

@@ -17,6 +17,7 @@
 #include <vector>
 #include <span>
 
+#include "ChunkHeader.h"
 #include "include/constants.h"
 #include "include/NetIQBlock.h"
 
@@ -190,15 +191,35 @@ namespace sdrcomms {
                     // with packet buffer vector std::vector<IQSample> packet_buffer(PACKET_SAMPLES);
                     // we need a data type to hold iq values, but we also want metadata in the header.
                     //
+                    // prevent rounding down.
+                    size_t total_chunks = (bytes.size() + UDP_BYTES_PER_CHUNK - 1) / UDP_BYTES_PER_CHUNK;
+                    int chunk_index = 0;
                     for (size_t i=0; i < bytes.size(); i+= UDP_BYTES_PER_CHUNK) {
                         size_t chunk_size = std::min(static_cast<size_t>(UDP_BYTES_PER_CHUNK), bytes.size() - i);
+                        ChunkHeader chunk_header(chunk_index, total_chunks, chunk_size);
                         auto chunk = bytes.substr(i, chunk_size);
+
+                        std::ostringstream oss2{std::ios::binary};
+                        if (!chunk_header.serialize(oss2)) {
+                            // couldn't write to the stream need to skip this block.
+                            continue;
+                        }
+                        std::string chunk_bytes = oss2.str();
+                        // send the header in a separate data gram
+                        sendto(server_socket,
+                               chunk_bytes.data(),
+                               chunk_bytes.size(),
+                               0, // MSG_WAITALL
+                               (struct sockaddr *) &client.address,
+                               sizeof(client.address));
+                        // send the chunk data in a second data gram.
                         sendto(server_socket,
                                chunk.data(),
                                chunk.size(),
                                0, // MSG_WAITALL
                                (struct sockaddr *) &client.address,
                                sizeof(client.address));
+                        ++chunk_index;
                     }
 
                 }
