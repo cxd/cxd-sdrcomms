@@ -96,7 +96,7 @@ namespace sdrcommsui {
          * @param spectrum
          * @return
          */
-        std::vector<std::complex<float>> fftShift(const std::vector<std::complex<float>>& spectrum);
+        std::vector<std::complex<float>> fftShift(const std::vector<std::complex<float>>& source);
 
         /**
          * average the spectrum for block sizes within our drawable dimensions

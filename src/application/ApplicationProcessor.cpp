@@ -10,7 +10,7 @@ ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udp
     this->udpPort = udpPort;
     this->mockProcessor = std::make_unique<MockProcessor>();
     this->sampleStreamerProcessor = std::make_unique<sdrcomms::SampleStreamerProcessor>(udpServerAddress, udpPort);
-    this->fftProcessor = std::make_unique<sdrcomms::FFTSampleProcessor>(sdrcomms::REQUIRED_SAMPLES, nullptr);
+    //this->fftProcessor = std::make_unique<sdrcomms::FFTSampleProcessor>(sdrcomms::REQUIRED_SAMPLES, nullptr);
 }
 
 void ApplicationProcessor::startServer() {
@@ -29,6 +29,6 @@ void ApplicationProcessor::stopServer() {
 void ApplicationProcessor::process(const sdrcomms::IQBlock &block) {
     this->mockProcessor->process(block);
     // try processing the fft.
-    this->fftProcessor->process(block);
+    //this->fftProcessor->process(block);
     this->sampleStreamerProcessor->process(block);
 }

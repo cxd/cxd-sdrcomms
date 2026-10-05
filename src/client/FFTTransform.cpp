@@ -169,6 +169,8 @@ namespace sdrcomms {
         fftConfig.size[1] = 1;
         fftConfig.size[2] = 1;
         fftConfig.fence = &fence;
+        fftConfig.performR2C = 0;
+
 
         // assign buffer
         VkBuffer *inputOutputBuffers = {&deviceBuffer};

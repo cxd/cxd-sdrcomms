@@ -190,11 +190,12 @@ namespace sdrcommsui {
          * @param spectrum
          * @return
          */
-    std::vector<std::complex<float> > SpectrumWaterfall::fftShift(const std::vector<std::complex<float> > &spectrum) {
-        size_t half_size = spectrum.size() / 2;
-        std::vector<std::complex<float> > output(spectrum.size());
-        std::memcpy(output.data(), spectrum.data() + half_size, half_size * sizeof(std::complex<float>));
-        std::memcpy(output.data() + half_size, spectrum.data(), half_size * sizeof(std::complex<float>));
+    std::vector<std::complex<float> > SpectrumWaterfall::fftShift(const std::vector<std::complex<float> > &source) {
+        size_t half_size = source.size() / 2;
+        size_t N = source.size();
+        std::vector<std::complex<float> > output(source.size());
+        std::memcpy(output.data(), source.data() + half_size, (N - half_size) * sizeof(std::complex<float>));
+        std::memcpy(output.data() + half_size, source.data(), half_size * sizeof(std::complex<float>));
         return output;
     }
 

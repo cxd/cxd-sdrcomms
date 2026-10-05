@@ -26,7 +26,6 @@ namespace sdrcommsui {
                                     height,
                                     sample_size,
                                     this->netClient->getReceiveQueue());
-        this->sketch->init();
         this->app = std::make_unique<drawing::DrawingApp>(SDL_INIT_VIDEO,
                                                           "Spectrum Waterfall",
                                                           false,
