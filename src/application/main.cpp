@@ -120,8 +120,36 @@ int main(int argc, char **argv) {
     sigaction(SIGINT, &sig_int_handler, nullptr);
     sigaction(SIGTERM, &sig_int_handler, nullptr);
 
+    // 70 MHz
+    double min_freq = 7e6;
+    // 6 GhZ
+    double max_freq = 6e7;
+    auto lastScanChange = std::chrono::steady_clock::now();
+    double current_freq = client.GetCenterFrequency();
+    int scan_direction = 1;
     // stream until interrupted
     while (keep_alive) {
+        //  TODO: we need to introduce a separate controller class
+        // to control the frequency scanning.
+        // for now we will just use a simple timed interval temporarily.
+        // however the control class will also need to support messaging from
+        // the client over MQTT for control of whether to stop automatically scanning
+        // and to set a given frequency.
+        auto now = std::chrono::steady_clock::now();
+        auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastScanChange).count();
+        if (delta > sdrcomms::FREQUENCY_SCAN_CHANGE_MILLIS) {
+            if (current_freq + scan_direction*sdrcomms::FREQUENCY_STEP >= max_freq) {
+                scan_direction = -1;
+            } else if (current_freq + scan_direction*sdrcomms::FREQUENCY_STEP <= min_freq) {
+                scan_direction = 1;
+            }
+            current_freq += scan_direction*sdrcomms::FREQUENCY_STEP;
+            client.SetCenterFrequency(current_freq);
+            std::cout << "Setting frequency to " << current_freq << std::endl;
+            lastScanChange = now;
+        }
+
+
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     std::cout << "Stopping stream" << std::endl;

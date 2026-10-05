@@ -23,9 +23,20 @@ namespace sdrcomms {
     const int DEFAULT_QUEUE_SIZE = 128;
 
     /**
+     *
      * default center frequency. 1Ghz
      */
     const double DEFAULT_CENTER_FREQUENCY = 1e7;
+
+    /**
+     * a step of 100 Hz
+     */
+    const double FREQUENCY_STEP = 1000;
+
+    /**
+     * step frequency every n millis.
+     */
+    const long long FREQUENCY_SCAN_CHANGE_MILLIS = 30 * 1000;
 
     /**
      * default minimum transmission unit

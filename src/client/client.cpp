@@ -190,6 +190,15 @@ namespace sdrcomms {
         dropBlocks.store(10, std::memory_order_relaxed);
     }
 
+    /**
+         * return the current center frequency
+         * @return
+         */
+    double Client::GetCenterFrequency() {
+        double freq = centerFrequency.load(std::memory_order_relaxed);
+        return freq;
+    }
+
 
     void Client::SetSampleRateMSps(double sampleRate) {
         if (sampleRate < minSampleRate || sampleRate > maxSampleRate) {

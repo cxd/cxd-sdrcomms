@@ -62,6 +62,12 @@ namespace sdrcomms {
         void SetCenterFrequency(double frequency);
 
         /**
+         * return the current center frequency
+         * @return
+         */
+        double GetCenterFrequency();
+
+        /**
          * set the sample rate for the device
          * must be connected
          * @param sampleRate
