@@ -130,11 +130,12 @@ int main(int argc, char **argv) {
     // stream until interrupted
     while (keep_alive) {
         //  TODO: we need to introduce a separate controller class
-        // to control the frequency scanning.
+        // to control the frequency scanning. [MODE_AUTO, MODE_COMMAND]
         // for now we will just use a simple timed interval temporarily.
         // however the control class will also need to support messaging from
         // the client over MQTT for control of whether to stop automatically scanning
         // and to set a given frequency.
+        //
         auto now = std::chrono::steady_clock::now();
         auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastScanChange).count();
         if (delta > sdrcomms::FREQUENCY_SCAN_CHANGE_MILLIS) {
