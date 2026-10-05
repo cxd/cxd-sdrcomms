@@ -46,7 +46,10 @@ int main(int argc, char **argv) {
         return 1;
     }
     // instantiate the display.
-    sdrcommsui::Display display(serverUri, udp_stream_port, sdrcomms::REQUIRED_SAMPLES);
+    sdrcommsui::Display display(serverUri, udp_stream_port,
+        sdrcomms::REQUIRED_SAMPLES,
+        800,
+        600);
 
     // handle the close operations and shutdown the UDP client.
     struct sigaction sig_int_handler;

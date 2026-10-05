@@ -15,6 +15,11 @@ add_executable(sdrcommsui
         include/netclient.h
         display.cpp
         include/display.h
+        include/sketch.h
+        DrawingApp.cpp
+        include/DrawingApp.h
+        SpectrumWaterfall.cpp
+        include/SpectrumWaterfall.h
 
 )
 FetchContent_GetProperties(cli11)

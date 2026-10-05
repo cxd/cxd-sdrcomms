@@ -5,7 +5,12 @@
 #ifndef SDRCOMMS_DISPLAY_H
 #define SDRCOMMS_DISPLAY_H
 #include <memory>
+
+#include "DrawingApp.h"
 #include "netclient.h"
+#include "sketch.h"
+#include "SpectrumWaterfall.h"
+
 namespace sdrcommsui {
     class Display {
     public:
@@ -15,7 +20,7 @@ namespace sdrcommsui {
          * @param port
          * @param sample_size
          */
-        Display(std::string udpServer, int port, size_t sample_size);
+        Display(std::string udpServer, int port, size_t sample_size, int width, int height);
 
         /**
          * run the display
@@ -53,8 +58,9 @@ namespace sdrcommsui {
         int port;
         size_t sampleSize;
         std::unique_ptr<NetClient> netClient;
-
         std::atomic<bool> running;
+        std::shared_ptr<drawing::DrawingApp> app;
+        std::shared_ptr<SpectrumWaterfall> sketch;
 
     };
 } // sdrcommsui
