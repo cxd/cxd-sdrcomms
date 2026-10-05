@@ -67,13 +67,13 @@ namespace sdrcommsui {
          * draw blocks in the renderer
          * @param renderer
          */
-        void draw_blocks(SDL_Renderer *renderer);
+        void draw_blocks(SDL_Renderer *renderer, std::vector<std::vector<float>> averages);
 
         /**
          * get min and max power from spectrum
          * @return
          */
-        std::tuple<float,float> get_min_max();
+        std::tuple<float,float> get_min_max(std::vector<std::vector<float>> averages);
 
         /**
          * normalise the db

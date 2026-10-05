@@ -49,35 +49,45 @@ namespace sdrcommsui {
         if (this->spectrum.size() < this->MAX_QUEUE_SIZE) {
             return;
         }
-        std::shared_lock<std::shared_mutex> lock(this->updateMutex);
-        this->draw_blocks(renderer);
-        lock.unlock();
+        SDL_RenderClear(renderer);
+        //std::shared_lock<std::shared_mutex> lock(this->updateMutex);
+        std::vector<std::vector<float>> averages{this->spectrum.begin(), this->spectrum.end()};
+        this->draw_blocks(renderer, averages);
+        //lock.unlock();
     }
 
-    void SpectrumWaterfall::draw_blocks(SDL_Renderer *renderer) {
+    /**
+     * pass spectrum copy
+     * @param renderer
+     * @param averages
+     */
+    void SpectrumWaterfall::draw_blocks(SDL_Renderer *renderer, std::vector<std::vector<float>> averages) {
 
-        int y_block_size = height / this->spectrum.size();
+        int y_block_size = height / averages.size();
         int y_pos = 0;
 
-        auto [min, max] = this->get_min_max();
+        auto [min, max] = this->get_min_max(averages);
+        size_t num_rows = std::min(averages.size(), this->MAX_QUEUE_SIZE);
 
-        for (size_t i = 0; i < this->spectrum.size(); i++) {
+        for (size_t i = 0; i < num_rows; i++) {
             int x_pos = 0;
-            for (size_t j = 0; j < this->block_width; j++) {
-                if (i >= this->spectrum.size()) {
-                    break;
-                }
-                float avg = this->normalizePower(this->spectrum[i][j],
+            if (i >= num_rows) {
+                break;
+            }
+            size_t num_blocks = averages[i].size();
+            for (size_t j = 0; j < num_blocks; j++) {
+
+                float avg = this->normalizePower(averages[i][j],
                     min,
                     max);
                 SDL_Color col = this->getSpectrumColor(avg);
-
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
                 SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, col.a);
                 SDL_Rect rect = SDL_Rect{x_pos, y_pos, this->block_width, y_block_size};
                 SDL_RenderFillRect(renderer, &rect);
                 x_pos += this->block_width;
             }
-            x_pos += y_block_size;
+            y_pos += y_block_size;
         }
 
     }
@@ -86,12 +96,19 @@ namespace sdrcommsui {
         * get min and max power from spectrum
         * @return
         */
-    std::tuple<float,float> SpectrumWaterfall::get_min_max() {
+    std::tuple<float,float> SpectrumWaterfall::get_min_max(std::vector<std::vector<float>> averages) {
         float min = std::numeric_limits<float>::max();
         float max = std::numeric_limits<float>::min();
-        for (size_t i=0;i<this->spectrum.size();i++) {
-            auto miniter = std::min_element(this->spectrum[i].begin(), this->spectrum[i].end());
-            auto maxiter = std::max_element(this->spectrum[i].begin(), this->spectrum[i].end());
+        size_t num_blocks = std::min(averages.size(), this->MAX_QUEUE_SIZE);
+        for (size_t i=0;i<num_blocks;i++) {
+            if (averages[i].empty()) {
+                continue;
+            }
+            auto miniter = std::min_element(averages[i].begin(), averages[i].end());
+            auto maxiter = std::max_element(averages[i].begin(), averages[i].end());
+            if (miniter == averages[i].end() || maxiter == averages[i].end()) {
+                continue;
+            }
             float cMin = *miniter;
             float cMax = *maxiter;
             if (cMin < min) {
@@ -161,7 +178,8 @@ namespace sdrcommsui {
                     continue;
                 }
                 std::vector<std::complex<float> > fftOut = this->fft->fft(block.samples);
-                std::shared_lock<std::shared_mutex> lock(this->updateMutex);
+                // write lock block readers
+                std::unique_lock<std::shared_mutex> lock(this->updateMutex);
 
                 // we will only draw if the spectrum is full of data.
                 // if we have more values than we can render we need to take a sliding average

@@ -312,7 +312,7 @@ namespace sdrcomms {
         void *data;
         uint32_t buffer_size = bufferSize;
         vkMapMemory(device, deviceMemory, 0, buffer_size, 0, &data);
-        std::memcpy(data, input.data(), buffer_size);
+        std::memcpy(data, input.data(), bufferSize);
         vkUnmapMemory(device, deviceMemory);
 
         commandBufferBeginInfo = {
@@ -347,7 +347,7 @@ namespace sdrcomms {
         vkQueueWaitIdle(queue);
 
         // copy data back from device into output
-        std::vector<std::complex<float> > output(bufferSize);
+        std::vector<std::complex<float> > output(fftSize);
         vkMapMemory(device, deviceMemory, 0, buffer_size, 0, &data);
         std::memcpy(output.data(), data, buffer_size);
         vkUnmapMemory(device, deviceMemory);
