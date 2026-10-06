@@ -366,10 +366,9 @@ namespace sdrcomms {
             double freq = centerFrequency.load(std::memory_order_relaxed);
             if (samples_read >= REQUIRED_SAMPLES) {
 
-#ifdef CL_DEBUG_PLUTO
+#ifdef DEBUG_VERBOSE
                 std::cout << "[" << channel << "] Read: " << samples_read << " " << mtu << std::endl;
 #endif
-                std::cout << "[" << channel << "] Read: " << samples_read << " " << mtu << std::endl;
                 int attempt = 0;
                 // try multiple times to push the data allowing the queue to catch up.
                 auto now = std::chrono::system_clock::now();
@@ -441,7 +440,9 @@ namespace sdrcomms {
                 }
                 if (process_data) {
                     try {
+#ifdef DEBUG_VERBOSE
                         std::cout << "[" << channel << "] Process block: " << block.samples.size() << std::endl;
+#endif
                         // execute the callback
                         processor->process(block);
                     } catch (std::exception &e) {

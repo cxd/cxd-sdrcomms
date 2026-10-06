@@ -35,10 +35,14 @@ public:
 private:
     std::string udpServerAddress;
     int udpPort;
+    static const long ONE_SECOND = 1000;
 
     std::unique_ptr<MockProcessor> mockProcessor;
     std::unique_ptr<sdrcomms::SampleStreamerProcessor> sampleStreamerProcessor;
     std::unique_ptr<sdrcomms::FFTSampleProcessor> fftProcessor;
+
+    long blocks_per_second;
+    std::chrono::time_point<std::chrono::system_clock> last_packet;
 };
 
 

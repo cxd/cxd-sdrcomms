@@ -238,6 +238,14 @@ namespace sdrcommsui {
                                                  iqBlock.samples,
                                                  iqBlock.samples.size(),
                                                  iqBlock.centerFreq);
+                        auto now = std::chrono::system_clock::now();
+                        auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->last_packet).count();
+                        if (delta >= ONE_SECOND) {
+                            last_packet = now;
+                            std::cout << "Blocks per second: " << this->blocks_per_second << std::endl;
+                            this->blocks_per_second = 0;
+                        }
+                        this->blocks_per_second++;
                     }
                 } catch (std::exception &ex) {
                     //

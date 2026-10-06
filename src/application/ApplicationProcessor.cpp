@@ -3,6 +3,9 @@
 //
 
 #include "ApplicationProcessor.h"
+
+#include <iostream>
+
 #include "constants.h"
 
 ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udpPort) {
@@ -27,6 +30,16 @@ void ApplicationProcessor::stopServer() {
      * @param block
      */
 void ApplicationProcessor::process(const sdrcomms::IQBlock &block) {
+    auto now = std::chrono::system_clock::now();
+    auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->last_packet).count();
+    if (delta >= ONE_SECOND) {
+        last_packet = now;
+#ifdef DEBUG_VERBOSE
+        std::cout << "Blocks per second: " << this->blocks_per_second << std::endl;
+#endif
+        this->blocks_per_second = 0;
+    }
+    this->blocks_per_second++;
     this->mockProcessor->process(block);
     // try processing the fft.
     this->fftProcessor->process(block);

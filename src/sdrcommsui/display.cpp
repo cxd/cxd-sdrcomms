@@ -40,9 +40,13 @@ namespace sdrcommsui {
         }
         running.store(true, std::memory_order_relaxed);
         this->subscibe();
+        // sleep for a while to allow the client to start and then initialise the UI
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+
         // might need to run this in the background.
         this->sketch->init();
         this->app->Run();
+
     }
 
     void Display::stop() {
