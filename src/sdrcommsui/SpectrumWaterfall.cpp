@@ -118,12 +118,13 @@ namespace sdrcommsui {
                 max = cMax;
             }
         }
+        /*
         if (min > min_spectrum_db) {
             min = min_spectrum_db;
         }
         if (max < max_spectrum_db) {
             max = max_spectrum_db;
-        }
+        }*/
         return std::make_tuple(min,max);
     }
 

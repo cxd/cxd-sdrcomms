@@ -58,9 +58,9 @@ namespace sdrcommsui {
          */
         const int block_width = 10;
 
-        const float min_spectrum_db = -100.0f;
+        const float min_spectrum_db = -200.0f;
 
-        const float max_spectrum_db = 40.0f;
+        const float max_spectrum_db = 200.0f;
 
         /**
          * receiver thread updates blocks

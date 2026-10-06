@@ -24,9 +24,9 @@ namespace sdrcomms {
 
     /**
      *
-     * default center frequency. 1Ghz
+     * default center frequency. 2.4Ghz
      */
-    const double DEFAULT_CENTER_FREQUENCY = 1e7;
+    const double DEFAULT_CENTER_FREQUENCY = 2.4e7;
 
     /**
      * a step of 100 Hz
