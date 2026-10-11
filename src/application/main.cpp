@@ -9,7 +9,9 @@
 #include <csignal>
 #include <unistd.h>
 #include "ApplicationProcessor.h"
+#include "Controller.h"
 #include "MockProcessor.h"
+#include "MQTTServer.h"
 
 
 volatile sig_atomic_t keep_alive = 1;
@@ -54,6 +56,13 @@ int main(int argc, char **argv) {
     CLI::Option *udpStreamPortOpt = app.add_option("-p,--udp-stream-port", udp_stream_port,
                                                     "The port for the udp stream ie: 15555");
 
+    std::string mqttServerUri = "127.0.0.1";
+    CLI::Option *mqttServerUriOpt = app.add_option("-m,--mqtt-server-address", mqttServerUri,
+                                               "The IP Address for the MQTT server eg: 127.0.0.1");
+    int mqtt_port = sdrcomms::DEFAULT_MQTT_PORT;
+    CLI::Option *mqttPortOpt = app.add_option("-t,--mqtt-server-port", mqtt_port,
+                                                        "The port for the MQTT server ie: 1833");
+
 
     CLI11_PARSE(app, argc, argv);
     // these params can be used to connect to local device directly
@@ -83,33 +92,50 @@ int main(int argc, char **argv) {
         --device-uri="ip:pluto.local"
         --bind-address="192.168.0.102"
     */
-    sdrcomms::Client client{
+    auto client = std::make_shared<sdrcomms::Client>(
         serverUri,
         driverName,
         remoteDriver,
         deviceUri,
         bindAddress,
         sdrcomms::DEFAULT_QUEUE_SIZE
-    };
-    bool isConnectd = client.Connect();
+    );
+    bool isConnectd = client->Connect();
     std::cout << "Client connected: " << isConnectd << std::endl;
     if (isConnectd) {
-        client.PrintSoapySDRInfo();
+        client->PrintSoapySDRInfo();
     } else {
         std::cerr << "Could not connect to soapysdr server" << std::endl;
         return 1;
     }
-    client.SetSampleRateMSps(sdrcomms::DEFAULT_SAMPLE_RATE_MSPS);
-    client.SetCenterFrequency(sdrcomms::DEFAULT_CENTER_FREQUENCY);
+    client->SetSampleRateMSps(sdrcomms::DEFAULT_SAMPLE_RATE_MSPS);
+    client->SetCenterFrequency(sdrcomms::DEFAULT_CENTER_FREQUENCY);
     auto processor = std::make_shared<ApplicationProcessor>(udpServerUri, udp_stream_port);
     // start the processor server to allow remote connections.
     processor->startServer();
 
-    bool flag = client.StreamData(processor);
+
+
+    bool flag = client->StreamData(processor);
     if (!flag) {
         std::cout << "Failed to stream data" << std::endl;
+        processor->stopServer();
+        client->StopStreaming();
         return 1;
     }
+    // we want to initialise the mqtt server to handle control channel communications.
+    std::shared_ptr<sdrcomms::MQTTServer> mqttServer = std::make_shared<sdrcomms::MQTTServer>(mqttServerUri, mqtt_port);
+    if (!mqttServer->init() || !mqttServer->start()) {
+        std::cerr << "Could not connect to mqtt service: " << mqttServerUri << ":" << mqtt_port << std::endl;
+        mqttServer->stop();
+        processor->stopServer();
+        client->StopStreaming();
+        return 1;
+    }
+    Controller controller {client, mqttServer->getMessageQueue()};
+    controller.start();
+
+
     std::cout << "Begin Stream use Ctrl+C to exit" << std::endl;
 
     struct sigaction sig_int_handler;
@@ -120,41 +146,15 @@ int main(int argc, char **argv) {
     sigaction(SIGINT, &sig_int_handler, nullptr);
     sigaction(SIGTERM, &sig_int_handler, nullptr);
 
-    // 70 MHz
-    double min_freq = 7e6;
-    // 6 GhZ
-    double max_freq = 6e7;
-    auto lastScanChange = std::chrono::steady_clock::now();
-    double current_freq = client.GetCenterFrequency();
-    int scan_direction = 1;
     // stream until interrupted
     while (keep_alive) {
-        //  TODO: we need to introduce a separate controller class
-        // to control the frequency scanning. [MODE_AUTO, MODE_COMMAND]
-        // for now we will just use a simple timed interval temporarily.
-        // however the control class will also need to support messaging from
-        // the client over MQTT for control of whether to stop automatically scanning
-        // and to set a given frequency.
-        //
-        auto now = std::chrono::steady_clock::now();
-        auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastScanChange).count();
-        if (delta > sdrcomms::FREQUENCY_SCAN_CHANGE_MILLIS) {
-            if (current_freq + scan_direction*sdrcomms::FREQUENCY_STEP >= max_freq) {
-                scan_direction = -1;
-            } else if (current_freq + scan_direction*sdrcomms::FREQUENCY_STEP <= min_freq) {
-                scan_direction = 1;
-            }
-            current_freq += scan_direction*sdrcomms::FREQUENCY_STEP;
-            client.SetCenterFrequency(current_freq);
-            std::cout << "Setting frequency to " << current_freq << std::endl;
-            lastScanChange = now;
-        }
-
-
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     std::cout << "Stopping stream" << std::endl;
-    client.StopStreaming();
+    controller.stop();
+    mqttServer->stop();
     processor->stopServer();
+    client->StopStreaming();
+
     return 0;
 }

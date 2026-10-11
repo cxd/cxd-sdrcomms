@@ -19,6 +19,12 @@ namespace sdrcomms {
         bool init();
         bool start();
         bool stop();
+
+        /**
+         * get the message queue for the MQTT communication.
+         * @return
+         */
+        std::shared_ptr<MessageQueue<ControlMessage>> getMessageQueue();
     private:
         std::string serverAddress;
         int port;

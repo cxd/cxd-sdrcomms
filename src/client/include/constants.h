@@ -29,9 +29,9 @@ namespace sdrcomms {
     const double DEFAULT_CENTER_FREQUENCY = 2.4e7;
 
     /**
-     * a step of 100 Hz
+     * a step of 1 kHz
      */
-    const double FREQUENCY_STEP = 1000;
+    const double FREQUENCY_STEP = 10000;
 
     /**
      * step frequency every n millis.
@@ -78,6 +78,12 @@ namespace sdrcomms {
      * default UDP port
      */
     const int DEFAULT_UDP_PORT = 45557;
+
+    /**
+     * default port for MQTT service running on same host.
+     * uses mosquitto.
+     */
+    const int DEFAULT_MQTT_PORT = 1883;
 
     /**
      * practical limits of amount of UDP data to send

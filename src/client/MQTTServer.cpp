@@ -13,6 +13,14 @@ namespace sdrcomms {
         this->messageQueue = std::make_shared<MessageQueue<ControlMessage>>(DEFAULT_QUEUE_SIZE);
     }
 
+    /**
+         * get the message queue for the MQTT communication.
+         * @return
+         */
+    std::shared_ptr<MessageQueue<ControlMessage>> MQTTServer::getMessageQueue() {
+        return this->messageQueue;
+    }
+
     bool MQTTServer::init() {
         int result = mosquitto_lib_init();
         if (result != MOSQ_ERR_SUCCESS) {
@@ -42,6 +50,7 @@ namespace sdrcomms {
         mosquitto_publish_callback_set(this->mServer, publish_callback);
         mosquitto_message_callback_set(this->mServer, message_callback);
         isInit.store(true, std::memory_order_relaxed);
+        return true;
     }
     bool MQTTServer::start() {
         if (!isInit.load(std::memory_order_relaxed)) {

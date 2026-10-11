@@ -30,7 +30,9 @@ add_executable(application main.cpp
         MockProcessor.cpp
         MockProcessor.h
         ApplicationProcessor.cpp
-        ApplicationProcessor.h)
+        ApplicationProcessor.h
+        Controller.cpp
+        Controller.h)
 
 set_target_properties(application PROPERTIES
         POSITION_INDEPENDENT_CODE 1
