@@ -66,8 +66,14 @@ if(NOT soapysdr_POPULATED)
 endif()
 
 if(APPLE)
+    set(HOMEBREW_HINTS "/opt/homebrew" "/usr/local")
     # 1. Allow CMake to recognize and unpack macOS .framework bundles natively
     set(CMAKE_FRAMEWORK_PATH "/Library/Frameworks" ${CMAKE_FRAMEWORK_PATH})
+
+
+    # Add Homebrew search paths for Apple Silicon and Intel Macs
+    list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew" "/usr/local")
+
 
     # 2. Hard-define the include and library targets to clear the SoapyPluto checks
     set(LIBIIO_FOUND TRUE)

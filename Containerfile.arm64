@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y \
     glslang-dev \
     glslang-tools \
     glslc \
+    mosquitto-dev libmosquitto-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the inner container context path

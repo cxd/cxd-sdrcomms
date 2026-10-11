@@ -55,6 +55,29 @@ find_package(Vulkan REQUIRED)
 message(STATUS "Vulkan found:")
 find_package(glslang REQUIRED)
 message(STATUS "glslang found:")
+
+if (APPLE)
+    find_path(MOSQUITTO_INCLUDE_DIR
+            NAMES mosquitto.h
+            HINTS ${HOMEBREW_HINTS}
+            PATH_SUFFIXES include)
+    find_library(MOSQUITTO_LIBRARY
+            NAMES mosquitto
+            HINTS ${HOMEBREW_HINTS}
+            PATH_SUFFIXES lib
+            )
+else()
+    find_path(MOSQUITTO_INCLUDE_DIR
+            NAMES mosquitto.h
+            HINTS /usr/
+            PATH_SUFFIXES include)
+    find_library(MOSQUITTO_LIBRARY
+            NAMES mosquitto
+            HINTS /usr/
+            PATH_SUFFIXES lib
+    )
+    message(STATUS "mosquitto found:")
+endif()
 # vKFFT
 FetchContent_Declare(
         vkfft
@@ -65,6 +88,14 @@ FetchContent_MakeAvailable(vkfft)
 if(APPLE)
     target_compile_definitions(VkFFT INTERFACE VKFFT_BACKEND=0)
 endif()
+
+# Json library
+
+FetchContent_Declare(json
+        GIT_REPOSITORY https://github.com/nlohmann/json
+        GIT_TAG v3.12.0)
+FetchContent_MakeAvailable(json)
+
 
 add_library(client_static STATIC include/client.h
         client.cpp
@@ -86,7 +117,11 @@ add_library(client_static STATIC include/client.h
         FFTSampleProcessor.cpp
         include/FFTSampleProcessor.h
         ChunkHeader.cpp
-        include/ChunkHeader.h)
+        include/ChunkHeader.h
+        MQTTServer.cpp
+        include/MQTTServer.h
+        include/MessageQueue.h
+        include/ControlMessage.h)
 
 # 2. If the option is turned ON, inject a preprocessor macro into the C++ compiler
 if (ENABLE_SDR_DEBUG)
@@ -116,15 +151,22 @@ set_target_properties(client_static PROPERTIES
         BUILD_RPATH "${soapysdr_BINARY_DIR}/lib"
 )
 
+# Modern CMake approach: link include directories and library
+target_include_directories(client_static PRIVATE ${MOSQUITTO_INCLUDE_DIR})
+target_link_libraries(client_static PRIVATE ${MOSQUITTO_LIBRARY})
+
 if (APPLE)
     target_compile_definitions(client_static PRIVATE VKFFT_BACKEND=0)
     # Append the nested include path for glslang
     target_include_directories(client_static PUBLIC "/opt/homebrew/include")
     target_include_directories(client_static PUBLIC "/opt/homebrew/include/glslang/Include")
     target_link_directories(client_static PUBLIC /opt/homebrew/lib)
+
+
 else()
     target_include_directories(client_static PUBLIC /usr/include)
     target_include_directories(client_static PUBLIC /usr/include/glslang/Include/)
+
 endif ()
 
 FetchContent_GetProperties(vkfft)
@@ -152,6 +194,8 @@ if (vkfft_POPULATED)
 endif ()
 
 
+
+target_link_libraries(client_static PUBLIC nlohmann_json::nlohmann_json)
 # Include the folder so your #include statements can locate the headers
 #target_include_directories(client_static PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty/SDL2_gfx")
 
