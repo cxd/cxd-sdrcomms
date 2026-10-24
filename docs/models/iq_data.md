@@ -56,4 +56,18 @@ So are target sample rate is actually:
 
 We need an antialiasing low pass filter on the SDR stream as one of our processing steps.
 
+Since we have vulkan enabled FFT we might be able to perform FFT based resampling - frequency domain decimation.
+
+So we perform an FFT at high resolution.
+Then use FFT shift to move 0 Hz into the center.
+We then take a plus minus 3Khz around the center of the spectrum.
+Then we use the IFFT to convert back to the time domain.
+
+We also need to rescale the amplitude of the resulting time domain.
+
+One downside is the Gibbs phenomenon.
+
+Alternate approach is a Polyphase FIR Decimation.
+
+
 
