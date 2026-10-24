@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y \
     glslang-tools \
     glslc \
     mosquitto-dev libmosquitto-dev \
+    libonnxruntime-dev libonnxruntime-providers \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the inner container context path

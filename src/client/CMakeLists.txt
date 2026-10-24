@@ -66,6 +66,17 @@ if (APPLE)
             HINTS ${HOMEBREW_HINTS}
             PATH_SUFFIXES lib
             )
+    message(STATUS "mosquitto found:")
+    find_path(ONNXRUNTIME_INCLUDE_DIR
+            NAMES onnxruntime
+            HINTS ${HOMEBREW_HINTS}
+            PATH_SUFFIXES include)
+    find_library(ONNX_RUNTIME_LIBRARY
+            NAMES onnxruntime
+            HINTS ${HOMEBREW_HINTS}
+            PATH_SUFFIXES lib
+    )
+    message(STATUS "onnxruntime found:")
 else()
     find_path(MOSQUITTO_INCLUDE_DIR
             NAMES mosquitto.h
@@ -77,6 +88,17 @@ else()
             PATH_SUFFIXES lib
     )
     message(STATUS "mosquitto found:")
+    find_path(ONNXRUNTIME_INCLUDE_DIR
+            NAMES onnxruntime_cxx_api.h
+            HINTS /usr/
+            PATH_SUFFIXES include)
+    # x86_64-linux-gnu/
+    find_library(ONNX_RUNTIME_LIBRARY
+            NAMES onnxruntime
+            HINTS /usr/
+            PATH_SUFFIXES lib
+    )
+    message(STATUS "onnxruntime found:")
 endif()
 # vKFFT
 FetchContent_Declare(
@@ -154,6 +176,9 @@ set_target_properties(client_static PROPERTIES
 # Modern CMake approach: link include directories and library
 target_include_directories(client_static PRIVATE ${MOSQUITTO_INCLUDE_DIR})
 target_link_libraries(client_static PRIVATE ${MOSQUITTO_LIBRARY})
+# link with onnxruntime
+target_include_directories(client_static PRIVATE ${ONNXRUNTIME_INCLUDE_DIR})
+target_link_libraries(client_static PRIVATE ${ONNX_RUNTIME_LIBRARY})
 
 if (APPLE)
     target_compile_definitions(client_static PRIVATE VKFFT_BACKEND=0)

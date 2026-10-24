@@ -133,6 +133,10 @@ outputs
   Full freq range: [70, 6000] MHz
     RF freq range: [70, 6000] MHz
   Sample rates: [0.0651042, 61.44] MSps
+                [65104 Hz , 61440000 Hz]
+                [65 kHz , 61440 kHz]
+   
+  
   Filter bandwidths: 0.2, 1, 2, 3, 4, 6, 7, 8, 9, 10 MHz
 
 ----------------------------------------------------
@@ -168,11 +172,13 @@ outputs
 
 70 MHz to 6 GHz
 
-because it only has USB 2.0, the 56 MHz can only be received in short bursts.
+While the hardware can sample up to 61,440 kHz, 
+the PlutoSDR uses a USB 2.0 interface to send data back to your PC. 
+Because of USB bus bandwidth limits, users on platforms like the GNU Radio Wiki note 
+that the maximum continuous (real-time) sample rate is roughly 4,000 kHz to 5,000 kHz (4 to 5 MHz) 
+without dropping packets.
 
-continuously receiving is more like 4 or 5 MHz
-
-3MHz (3000000 Hz) eg:
+3 MHz  (3000 kHz, 3000000 Hz) eg:
 
 ```aiignore
 double sampleRate = 3.0e6;

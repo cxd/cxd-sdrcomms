@@ -110,8 +110,8 @@ namespace sdrcomms {
         /**
          * default sample rate for streaming
          */
-        double defaultSampleRateMsps = DEFAULT_SAMPLE_RATE_MSPS;
-        double defaultBandwidthHz = DEFAULT_SAMPLE_RATE_MSPS;
+        double defaultSampleRateMsps = DEFAULT_SAMPLE_RATE_HZ;
+        double defaultBandwidthHz = DEFAULT_SAMPLE_RATE_HZ;
 
         /**
          * configuration from the device.

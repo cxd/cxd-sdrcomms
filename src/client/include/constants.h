@@ -11,9 +11,11 @@ namespace sdrcomms {
      * Devices can support higher sample rates, but over USB 2.0 this
      * becomes challenging for continuous sampling.
      *
+     * We set this to 3000 kHz sampling rate or 3 MHz.
      *
+     * Recommendation for sampling over USB for PlutoSDR is between 4 MHz to 5 MHz
      */
-    const double DEFAULT_SAMPLE_RATE_MSPS = 3.0e6;
+    const double DEFAULT_SAMPLE_RATE_HZ = 3.0e6;
 
     /**
      * default queue depth.

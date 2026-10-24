@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
         std::cerr << "Could not connect to soapysdr server" << std::endl;
         return 1;
     }
-    client->SetSampleRateMSps(sdrcomms::DEFAULT_SAMPLE_RATE_MSPS);
+    client->SetSampleRateMSps(sdrcomms::DEFAULT_SAMPLE_RATE_HZ);
     client->SetCenterFrequency(sdrcomms::DEFAULT_CENTER_FREQUENCY);
     auto processor = std::make_shared<ApplicationProcessor>(udpServerUri, udp_stream_port);
     // start the processor server to allow remote connections.

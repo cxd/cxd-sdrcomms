@@ -24,7 +24,8 @@ namespace sdrcomms {
                 innerBlock.channel = block.channel;
                 innerBlock.sample_size = fftOut.size();
                 innerBlock.samples = fftOut;
-                innerBlock.innerBlock = std::make_shared<IQBlock>( block );
+                // we can add fft transformation as a processed attribute
+                innerBlock.attachments["fft"] = std::make_shared<IQBlock>( block );
                 this->inner->process(innerBlock);
             }
         }

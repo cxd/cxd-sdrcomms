@@ -6,6 +6,7 @@
 #define SDRCOMMS_IQBLOCK_H
 #include <vector>
 #include <complex>
+#include <map>
 #include <memory>
 
 namespace sdrcomms {
@@ -24,11 +25,11 @@ namespace sdrcomms {
         double centerFreq;
 
         /**
-         * an inner block can be passed referenced by the outer block to support
-         * collection of transformations.
-         * The inner block is not sent over the network.
+         * Attachments allow different transformations to be applied and attached to the block.
+         * They are given a name, as the block is passed through the processing pipeline.
+         * Nested processors can pass transformations by attaching them to the block.
          */
-        std::shared_ptr<IQBlock> innerBlock = nullptr;
+        std::map<std::string, std::shared_ptr<IQBlock>> attachments {};
 
     };
 } // sdrcomms

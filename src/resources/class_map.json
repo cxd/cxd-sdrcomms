@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "num_classes": 18,
+  "classes": {
+    "am": 0,
+    "dominoex11": 1,
+    "fax": 2,
+    "lsb": 3,
+    "morse": 4,
+    "mt63_1000": 5,
+    "navtex": 6,
+    "olivia16_1000": 7,
+    "olivia16_500": 8,
+    "olivia32_1000": 9,
+    "olivia8_250": 10,
+    "psk31": 11,
+    "psk63": 12,
+    "qpsk31": 13,
+    "rtty100_850": 14,
+    "rtty45_170": 15,
+    "rtty50_170": 16,
+    "usb": 17
+  }
+}
