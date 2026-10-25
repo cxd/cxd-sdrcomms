@@ -59,7 +59,7 @@ namespace sdrcomms {
         std::string modelBasePath;
         std::string modelFilePath;
         ModelFileSpec modelFileSpec;
-        Ort::Env& env;
+        Ort::Env& env = global_env();
         std::shared_ptr<Ort::Session> session;
         std::vector<int64_t> inputNodeDims;
         std::vector<int64_t> outputNodeDims;

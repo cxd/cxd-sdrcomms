@@ -6,6 +6,9 @@
 
 #include <fstream>
 #include <istream>
+#include <sstream>
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 namespace sdrcomms {
     ModelFileSpec::ModelFileSpec(std::string name,
@@ -40,14 +43,14 @@ namespace sdrcomms {
      * @return
      */
     ModelFileSpec ModelFileSpec::from_json(const std::string &data) {
-        nlohmann::json json = nlohmann::json::parse(data);
-        std::string name = json["name"].get<std::string>();
-        std::string version = json["version"].get<std::string>();
-        std::string onnx_file = json["onnx_file"].get<std::string>();
-        int sample_rate_hz = json["sample_rate_hz"].get<int>();
-        bool logits = json["logits"].get<bool>();
-        int input_length = json["input_length"].get<int>();
-        auto transforms = json["input_transforms"].get<std::vector<std::string> >();
+        json jobj = json::parse(data);
+        std::string name = jobj["name"].get<std::string>();
+        std::string version = jobj["version"].get<std::string>();
+        std::string onnx_file = jobj["onnx_file"].get<std::string>();
+        int sample_rate_hz = jobj["sample_rate_hz"].get<int>();
+        bool logits = jobj["logits"].get<bool>();
+        int input_length = jobj["input_length"].get<int>();
+        auto transforms = jobj["input_transforms"].get<std::vector<std::string> >();
         return ModelFileSpec{name, version, onnx_file, logits, sample_rate_hz, input_length, transforms};
     }
 

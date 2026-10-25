@@ -15,7 +15,7 @@
 
 class ApplicationProcessor : public sdrcomms::SampleProcessor {
 public:
-    ApplicationProcessor(std::string udpServerAddress, int udpPort);
+    ApplicationProcessor(std::string udpServerAddress, int udpPort, std::string modelFile, std::string modelPath);
 
     /**
      * implement the process method

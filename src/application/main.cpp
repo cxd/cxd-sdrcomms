@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
     }
     client->SetSampleRateMSps(sdrcomms::DEFAULT_SAMPLE_RATE_HZ);
     client->SetCenterFrequency(sdrcomms::DEFAULT_CENTER_FREQUENCY);
-    auto processor = std::make_shared<ApplicationProcessor>(udpServerUri, udp_stream_port);
+    auto processor = std::make_shared<ApplicationProcessor>(udpServerUri, udp_stream_port, modelSpecFile, modelPath);
     // start the processor server to allow remote connections.
     processor->startServer();
 

@@ -35,8 +35,6 @@ namespace sdrcomms {
      */
     bool ModelFileLoader::load_model() {
         try {
-            // only initialise the environment once.
-            env = global_env();
             Ort::SessionOptions session_options;
             session_options.SetIntraOpNumThreads(1);
             session_options.SetGraphOptimizationLevel(ORT_ENABLE_EXTENDED);
@@ -181,7 +179,7 @@ namespace sdrcomms {
             return {};
         }
         // first determine if the keys added into the input block attachments match the data input required for the model.
-        if (!check_model_input_attachments(block)) {
+        if (!check_model_input_attachments(input)) {
             // inputs are not supplied
 #ifdef DEBUG_VERBOSE
             std::cerr << "Model input attachments do not match the required input for the model." << std::endl;
@@ -189,7 +187,7 @@ namespace sdrcomms {
             return {};
         }
         // now we need to extract all input blocks
-        auto input_blocks = get_input_block_attachments(block.attachments);
+        auto input_blocks = get_input_block_attachments(input);
         auto input_data = get_input_data(input_blocks);
         // now we want to use this input data as the input to the model.
         return predict(input_data);

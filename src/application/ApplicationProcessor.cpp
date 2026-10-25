@@ -14,6 +14,8 @@ ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udp
     this->mockProcessor = std::make_unique<MockProcessor>();
     this->sampleStreamerProcessor = std::make_unique<sdrcomms::SampleStreamerProcessor>(udpServerAddress, udpPort);
     this->fftProcessor = std::make_unique<sdrcomms::FFTSampleProcessor>(sdrcomms::REQUIRED_SAMPLES, nullptr);
+    this->modelSpecFile = modelFile;
+    this->modelPath = modelPath;
 }
 
 void ApplicationProcessor::startServer() {
