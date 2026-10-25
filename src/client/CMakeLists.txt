@@ -143,7 +143,11 @@ add_library(client_static STATIC include/client.h
         MQTTServer.cpp
         include/MQTTServer.h
         include/MessageQueue.h
-        include/ControlMessage.h)
+        include/ControlMessage.h
+        ModelFileSpec.cpp
+        include/ModelFileSpec.h
+        include/ModelFileLoader.cpp
+        include/ModelFileLoader.h)
 
 # 2. If the option is turned ON, inject a preprocessor macro into the C++ compiler
 if (ENABLE_SDR_DEBUG)

@@ -8,7 +8,7 @@
 
 #include "constants.h"
 
-ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udpPort) {
+ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udpPort, std::string modelFile, std::string modelPath) {
     this->udpServerAddress = udpServerAddress;
     this->udpPort = udpPort;
     this->mockProcessor = std::make_unique<MockProcessor>();

@@ -63,6 +63,12 @@ int main(int argc, char **argv) {
     CLI::Option *mqttPortOpt = app.add_option("-t,--mqtt-server-port", mqtt_port,
                                                         "The port for the MQTT server ie: 1833");
 
+    std::string modelPath = "";
+    CLI::Option *modelPathOpt = app.add_option("-o,--model-path", modelPath,
+                                                "The base path to the model files");
+    std::string modelSpecFile = "";
+    CLI::Option *modeSpecFileOpt = app.add_option("-f,--model-file", modelSpecFile,
+        "The json file containing the model specification to use.");
 
     CLI11_PARSE(app, argc, argv);
     // these params can be used to connect to local device directly
@@ -72,6 +78,20 @@ int main(int argc, char **argv) {
         std::cout << app.help() << std::endl;
         return 1;
     }
+
+    if (modelPathOpt->count() == 0 || modelPath == "") {
+        std::cout << "Model Path not specified." << std::endl;
+        std::cout << app.help() << std::endl;
+        return 1;
+    }
+
+    if (modeSpecFileOpt->count() == 0 || modelSpecFile == "") {
+        std::cout << "Model Spec file not defined." << std::endl;
+        std::cout << app.help() << std::endl;
+        return 1;
+    }
+
+
     // these params are optionally used for remote connections.
     if (serverUriOpt->count() == 0) {
         serverUri = "";

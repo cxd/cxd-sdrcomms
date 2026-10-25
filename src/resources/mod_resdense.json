@@ -1,0 +1,9 @@
+{
+  "name": "mod_resdense",
+  "version": "002D_export",
+  "onnx_file": "mod_resdense/002D_export/2026-10-24/model.onnx",
+  "sample_rate_Hz": 6000,
+  "input_length": 2048,
+  "logits": false,
+  "input_transforms": ["iq","fft"]
+}

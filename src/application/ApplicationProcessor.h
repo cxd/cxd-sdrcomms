@@ -37,6 +37,9 @@ private:
     int udpPort;
     static const long ONE_SECOND = 1000;
 
+    std::string modelPath;
+    std::string modelSpecFile;
+
     std::unique_ptr<MockProcessor> mockProcessor;
     std::unique_ptr<sdrcomms::SampleStreamerProcessor> sampleStreamerProcessor;
     std::unique_ptr<sdrcomms::FFTSampleProcessor> fftProcessor;
