@@ -146,7 +146,7 @@ add_library(client_static STATIC include/client.h
         include/ControlMessage.h
         ModelFileSpec.cpp
         include/ModelFileSpec.h
-        include/ModelFileLoader.cpp
+        ModelFileLoader.cpp
         include/ModelFileLoader.h)
 
 # 2. If the option is turned ON, inject a preprocessor macro into the C++ compiler
