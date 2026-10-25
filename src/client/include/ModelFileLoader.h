@@ -28,6 +28,12 @@ namespace sdrcomms {
         bool load_model();
 
         /**
+         * unload the session and environment
+         * @return
+         */
+        bool unload();
+
+        /**
          * given the input data execute the prediction
          * and return the result.
          * @param input
@@ -35,12 +41,25 @@ namespace sdrcomms {
          */
         std::vector<float> predict(const IQBlock& input);
 
+        /**
+         * predict with 2d input vectors
+         * @param input
+         * @return
+         */
+        std::vector<float> predict(const std::vector<std::vector<float>> &input);
+
+        // static initialiser
+        static Ort::Env& global_env() {
+            static Ort::Env global_env(ORT_LOGGING_LEVEL_WARNING, "sdrcomms_onnx_host");
+            return global_env;
+        }
+
 
     private:
         std::string modelBasePath;
         std::string modelFilePath;
         ModelFileSpec modelFileSpec;
-        std::shared_ptr<Ort::Env> env;
+        Ort::Env& env;
         std::shared_ptr<Ort::Session> session;
         std::vector<int64_t> inputNodeDims;
         std::vector<int64_t> outputNodeDims;
@@ -53,6 +72,50 @@ namespace sdrcomms {
          * @return
          */
         bool check_model_input_attachments(const IQBlock & block) const;
+
+        std::map<std::string, std::shared_ptr<IQBlock>> get_input_block_attachments(const IQBlock &block);
+
+        /**
+         * extract the series of  values from the preprocessed input blocks expected by the model.
+         * @param input
+         * @return
+         */
+        std::vector<std::vector<float>> get_input_data(const std::map<std::string, std::shared_ptr<IQBlock>>& input) const;
+
+        /**
+         * flatten nested vectors into a single flat vector for use with ONNX Runtime.
+         * @param nested_matrix
+         * @return
+         */
+        std::vector<float> flatten_2d_tensor(const std::vector<std::vector<float>>& nested_matrix) const;
+
+        /**
+         * Convert logits to softmax probabilities.
+         * @param raw_logits
+         * @return
+         */
+        std::vector<float> compute_softmax(const std::vector<float>& raw_logits) const;
+
+        /**
+         * predict with memory info, prediction dim and flat vector
+         * @param input
+         * @return
+         */
+        std::vector<float> predict(const Ort::MemoryInfo &memory_info, const std::vector<int64_t> &prediction_shape, const std::vector<float> &flat_input_vector);
+
+        enum class InferenceBackend {
+            Auto = 0,
+            CUDA,
+            ROCM,
+            CoreML,
+            WebGPU,
+            CPU
+        };
+
+        InferenceBackend backend = InferenceBackend::Auto;
+
+        InferenceBackend detect_backend() const;
+
     };
 } // sdrcomms
 
