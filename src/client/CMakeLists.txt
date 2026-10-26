@@ -21,7 +21,7 @@ FetchContent_Declare(
 # This prevents it from escaping out to /opt/homebrew configurations.
 FetchContent_GetProperties(soapysdr)
 if (NOT soapysdr_POPULATED)
-    FetchContent_Populate(soapysdr)
+    FetchContent_MakeAvailable(soapysdr)
     set(SOAPY_SDR_IN_TREE_SOURCE_DIR "${soapysdr_SOURCE_DIR}" CACHE INTERNAL "")
     add_subdirectory(${soapysdr_SOURCE_DIR} ${soapysdr_BINARY_DIR})
 endif ()
@@ -57,6 +57,10 @@ find_package(glslang REQUIRED)
 message(STATUS "glslang found:")
 
 if (APPLE)
+    message(STATUS ${HOMEBREW_HINTS})
+    # Enable aggressive vectorization optimizations for Apple Silicon / Intel Mac
+    add_compile_options(-O3 -ffast-math)
+
     find_path(MOSQUITTO_INCLUDE_DIR
             NAMES mosquitto.h
             HINTS ${HOMEBREW_HINTS}
@@ -77,6 +81,19 @@ if (APPLE)
             PATH_SUFFIXES lib
     )
     message(STATUS "onnxruntime found:")
+
+    find_path(LIBLIQUID_INCLUDE_DIR
+            NAMES liquid/liquid.h liquid.h
+            HINTS ${HOMEBREW_HINTS}
+            PATH_SUFFIXES include)
+    find_library(LIQUID_LIBRARY
+            NAMES libliquid.ar libliquid.a liquid
+            HINTS ${HOMEBREW_HINTS}
+            PATH_SUFFIXES lib
+            NO_DEFAULT_PATH
+    )
+    message(STATUS "libliquid-dsp found:")
+
 else()
     find_path(MOSQUITTO_INCLUDE_DIR
             NAMES mosquitto.h
@@ -99,6 +116,17 @@ else()
             PATH_SUFFIXES lib
     )
     message(STATUS "onnxruntime found:")
+    find_path(LIBLIQUID_INCLUDE_DIR
+            NAMES liquid.h
+            HINTS /usr/
+            PATH_SUFFIXES include)
+    find_library(LIQUID_LIBRARY
+            NAMES libliquid.a liquid
+            HINTS /usr/
+            PATH_SUFFIXES lib
+            NO_DEFAULT_PATH
+    )
+    message(STATUS "libliquid-dsp found:")
 endif()
 # vKFFT
 FetchContent_Declare(
@@ -147,7 +175,9 @@ add_library(client_static STATIC include/client.h
         ModelFileSpec.cpp
         include/ModelFileSpec.h
         ModelFileLoader.cpp
-        include/ModelFileLoader.h)
+        include/ModelFileLoader.h
+        DownsampleProcessor.cpp
+        include/DownsampleProcessor.h)
 
 # 2. If the option is turned ON, inject a preprocessor macro into the C++ compiler
 if (ENABLE_SDR_DEBUG)
@@ -183,6 +213,9 @@ target_link_libraries(client_static PRIVATE ${MOSQUITTO_LIBRARY})
 # link with onnxruntime
 target_include_directories(client_static PRIVATE ${ONNXRUNTIME_INCLUDE_DIR})
 target_link_libraries(client_static PRIVATE ${ONNX_RUNTIME_LIBRARY})
+# link with liquid-dsp
+target_include_directories(client_static PRIVATE ${LIBLIQUID_INCLUDE_DIR})
+target_link_libraries(client_static PRIVATE ${LIQUID_LIBRARY})
 
 if (APPLE)
     target_compile_definitions(client_static PRIVATE VKFFT_BACKEND=0)

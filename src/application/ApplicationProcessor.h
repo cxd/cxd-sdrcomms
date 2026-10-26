@@ -21,7 +21,7 @@ public:
      * implement the process method
      * @param block
      */
-    void process(const sdrcomms::IQBlock &block) override;
+    void process(sdrcomms::IQBlock &block) override;
 
     /**
      * expose start server

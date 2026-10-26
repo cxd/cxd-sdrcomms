@@ -12,9 +12,9 @@ namespace sdrcomms {
     class SampleProcessorImpl : public SampleProcessor {
     public:
 
-        SampleProcessorImpl(std::shared_ptr<SampleProcessor> inner);
+        SampleProcessorImpl(std::string attach_key, std::shared_ptr<SampleProcessor> inner);
 
-        void process(const IQBlock &block) override;
+        void process(IQBlock &block) override;
 
     private:
         std::shared_ptr<SampleProcessor> inner;

@@ -29,7 +29,7 @@ namespace sdrcomms {
     }
 
 
-    void SampleStreamerProcessor::process(const IQBlock &block) {
+    void SampleStreamerProcessor::process(IQBlock &block) {
         if (running.load(std::memory_order_acquire)) {
             receiveQueue->push(block.timestampMs, block.channel, block.samples, block.samples.size(), block.centerFreq);
         }

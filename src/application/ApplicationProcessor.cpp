@@ -13,7 +13,7 @@ ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udp
     this->udpPort = udpPort;
     this->mockProcessor = std::make_unique<MockProcessor>();
     this->sampleStreamerProcessor = std::make_unique<sdrcomms::SampleStreamerProcessor>(udpServerAddress, udpPort);
-    this->fftProcessor = std::make_unique<sdrcomms::FFTSampleProcessor>(sdrcomms::REQUIRED_SAMPLES, nullptr);
+    this->fftProcessor = std::make_unique<sdrcomms::FFTSampleProcessor>("fft", sdrcomms::REQUIRED_SAMPLES, nullptr);
     this->modelSpecFile = modelFile;
     this->modelPath = modelPath;
 }
@@ -31,7 +31,7 @@ void ApplicationProcessor::stopServer() {
      * implement the process method
      * @param block
      */
-void ApplicationProcessor::process(const sdrcomms::IQBlock &block) {
+void ApplicationProcessor::process(sdrcomms::IQBlock &block) {
     auto now = std::chrono::system_clock::now();
     auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->last_packet).count();
     if (delta >= ONE_SECOND) {

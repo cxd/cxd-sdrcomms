@@ -6,7 +6,8 @@
 #include<iostream>
 
 namespace sdrcomms {
-    SampleProcessorImpl::SampleProcessorImpl(std::shared_ptr<SampleProcessor> inner) {
+    SampleProcessorImpl::SampleProcessorImpl(std::string attach_key, std::shared_ptr<SampleProcessor> inner) {
+        this->attach_key = attach_key;
         this->inner = inner;
     }
 
@@ -14,7 +15,7 @@ namespace sdrcomms {
      * process the supplied IQBlock
      * @param block
      */
-    void SampleProcessorImpl::process(const IQBlock &block) {
+    void SampleProcessorImpl::process(IQBlock &block) {
         if (inner != nullptr) {
             try {
                 inner->process(block);

@@ -9,7 +9,7 @@ MockProcessor::MockProcessor() {
     last = std::chrono::steady_clock::now();
 }
 
-void MockProcessor::process(const sdrcomms::IQBlock &block) {
+void MockProcessor::process(sdrcomms::IQBlock &block) {
     auto now = std::chrono::steady_clock::now();
     auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->last).count();
     int sz = block.samples.size();
