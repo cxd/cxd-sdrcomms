@@ -133,7 +133,10 @@ int main(int argc, char **argv) {
     auto processor = std::make_shared<ApplicationProcessor>(udpServerUri, udp_stream_port, sdrcomms::DEFAULT_CENTER_FREQUENCY,
         modelSpecFile, modelPath);
     // initialise the application processor.
-
+    if (!processor->init()) {
+        client->StopStreaming();
+        return 1;
+    }
     // start the processor server to allow remote connections.
     processor->startServer();
 

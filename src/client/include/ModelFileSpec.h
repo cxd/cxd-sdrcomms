@@ -55,6 +55,12 @@ namespace sdrcomms {
         int input_length;
         std::vector<std::string> input_transforms;
 
+        /**
+         * get all transforms in upper case
+         * @return
+         */
+        std::vector<std::string> getTransforms() const ;
+
     };
 }
 

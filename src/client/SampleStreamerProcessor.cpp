@@ -52,7 +52,7 @@ namespace sdrcomms {
         // a client can also send a remove request to stop receiving stream data.
         // otherwise it will be removed from the list.
 
-        server_socket = socket(AF_INET, SOCK_DGRAM, 0);
+        server_socket = ::socket(AF_INET, SOCK_DGRAM, 0);
         if (server_socket < 0) {
             std::cerr << "Could not create server" << std::endl;
             return;

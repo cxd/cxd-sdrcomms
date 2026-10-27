@@ -175,6 +175,7 @@ namespace sdrcomms {
         if (session == nullptr) {
             return {};
         }
+
         if (!check_model_input_attachments(input)) {
             return {};
         }
@@ -350,7 +351,7 @@ namespace sdrcomms {
          * @return
          */
     bool ModelFileLoader::check_model_input_attachments(const IQBlock &block) const {
-        auto expected_keys = modelFileSpec.input_transforms | std::ranges::to<std::set<std::string> >();
+        auto expected_keys = modelFileSpec.getTransforms() | std::ranges::to<std::set<std::string> >();
         auto actual_keys = std::views::keys(block.attachments) | std::ranges::to<std::set<std::string> >();
         bool matches = std::ranges::includes(actual_keys, expected_keys);
         return matches;
@@ -364,7 +365,7 @@ namespace sdrcomms {
     std::map<std::string, std::shared_ptr<IQBlock> >
     ModelFileLoader::get_input_block_attachments(const IQBlock &block) {
         std::map<std::string, std::shared_ptr<IQBlock> > input_blocks{};
-        auto expected_keys = modelFileSpec.input_transforms | std::ranges::to<std::set<std::string> >();
+        auto expected_keys = modelFileSpec.getTransforms() | std::ranges::to<std::set<std::string> >();
         for (auto key: expected_keys) {
             auto inner = block.attachments.at(key);
             input_blocks[key] = inner;

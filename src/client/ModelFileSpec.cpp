@@ -5,6 +5,8 @@
 #include "include/ModelFileSpec.h"
 
 #include <fstream>
+#include <ranges>
+#include <algorithm>
 #include <istream>
 #include <sstream>
 #include <nlohmann/json.hpp>
@@ -70,5 +72,23 @@ namespace sdrcomms {
         std::string json_data = buffer.str();
         in.close();
         return from_json(json_data);
+    }
+
+    /**
+         * get all transforms in upper case
+         * @return
+         */
+    std::vector<std::string> ModelFileSpec::getTransforms() const {
+        auto to_upper = [](std::string str) {
+            std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
+                return std::toupper(c);
+            });
+            return str;
+        };
+        auto upper_transforms = input_transforms
+                                | std::views::transform(to_upper)
+                                | std::ranges::to<std::vector<std::string>>();
+        return upper_transforms;
+
     }
 }

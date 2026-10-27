@@ -4,6 +4,8 @@
 
 #include "MQTTServer.h"
 
+#include <iostream>
+
 #include "constants.h"
 
 namespace sdrcomms {
@@ -72,6 +74,7 @@ namespace sdrcomms {
             port,
             keepAlive);
         if (result != MOSQ_ERR_SUCCESS) {
+            std::cerr << "Failed to connect to MQTT server: " << serverAddress << ":" << port << std::endl;
             mosquitto_destroy(this->mServer);
             mosquitto_lib_cleanup();
             isInit.store(false, std::memory_order_relaxed);

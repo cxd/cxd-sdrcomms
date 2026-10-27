@@ -36,7 +36,7 @@ bool ApplicationProcessor::init() {
     // udp stream processing chain
     this->sampleStreamerProcessor = std::make_unique<sdrcomms::SampleStreamerProcessor>(udpServerAddress, udpPort);
 
-    return false;
+    return true;
 }
 
 /**
@@ -50,7 +50,7 @@ bool ApplicationProcessor::load_model() {
         basePath.pop_back();
     }
     modelPath = basePath + "/" + modelSpec.onnx_file;
-    modelFileLoader = std::make_unique<sdrcomms::ModelFileLoader>(modelPath, modelSpec);
+    modelFileLoader = std::make_unique<sdrcomms::ModelFileLoader>(basePath, modelSpec);
     if (!modelFileLoader->load_model()) {
         std::cerr << "Failed to load model file: " << modelPath << "/" << modelSpec.onnx_file << std::endl;
         return false;
@@ -131,12 +131,14 @@ void ApplicationProcessor::process(sdrcomms::IQBlock &block) {
 
 
     // processing chain
+    // TODO: need to debug the downsample operation it is not producing the right length of output
     this->processingChain->process(block);
     // streaming iq samples
     this->sampleStreamerProcessor->process(block);
 
     // TODO: we should add a signal detection mechanism to determine if the classifier should be called.
     // execute classification.
+    this->collectAttachments(block);
     std::vector<float> probabilities = modelFileLoader->predict(block);
     // TODO: we need to pick the maximum index and read the class label for that index from the class labels file.
     // that could be done as part of prediction method inside modelFileLoader.
