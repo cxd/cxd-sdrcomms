@@ -28,9 +28,9 @@ used by the model.
 "name": "Name of Model",
 "version": "MODEL_VERSION_NUMBER_OR_TAG",
 "onnx_file": "/path/to/model.onnx",
-"sample_rate_Hz": 6000,
+"sample_rate_hz": 6000,
 "input_length": 2048,
-"input_transforms": ["iq", "fft"]
+"input_transforms": ["downsample", "fft"]
 }
 ```
 

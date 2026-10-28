@@ -18,7 +18,7 @@ namespace sdrcomms {
          * @param target_rate_hz
          * @param inner
          */
-        DownsampleProcessor(std::string attach_key, double source_rate_hz, double target_rate_hz, std::shared_ptr<SampleProcessor> inner);
+        DownsampleProcessor(std::string attach_key, size_t input_samples_size, double source_rate_hz, double target_rate_hz, std::shared_ptr<SampleProcessor> inner);
 
         /**
          * process the incoming block and update the inner processor.
@@ -29,6 +29,10 @@ namespace sdrcomms {
     private:
         double source_rate_hz;
         double target_rate_hz;
+        size_t input_sample_size;
+        // the required number of samples before downsampling
+        size_t required_input_samples;
+        std::shared_ptr<IQBlock> accumulator;
         std::shared_ptr<SampleProcessor> inner;
 
         /**

@@ -84,6 +84,7 @@ std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::build_processin
         if (op == sdrcomms::ProcessorOps::DOWNSAMPLE) {
             const std::shared_ptr<SampleProcessor> next = std::make_shared<sdrcomms::DownsampleProcessor>(
                 sdrcomms::operation_to_string(op),
+                sdrcomms::REQUIRED_SAMPLES, // default samples captured by the device.
                 source_sample_rate_hz,
                 modelSpec.sample_rate_hz,
                 lastProcessor);
