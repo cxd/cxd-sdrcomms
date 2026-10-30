@@ -11,7 +11,8 @@ namespace sdrcomms {
     enum class ProcessorOps {
         NONE = 0,
         DOWNSAMPLE = 1,
-        FFT = 2
+        FFT = 2,
+        CLASSIFY = 3,
     };
 
     constexpr std::string to_lowercase(std::string text) {
@@ -30,6 +31,9 @@ namespace sdrcomms {
         if (label == "fft") {
             return ProcessorOps::FFT;
         }
+        if (label == "classify") {
+            return ProcessorOps::CLASSIFY;
+        }
         return ProcessorOps::NONE;
     }
 
@@ -41,6 +45,8 @@ namespace sdrcomms {
                 return "DOWNSAMPLE";
             case ProcessorOps::FFT:
                 return "FFT";
+            case ProcessorOps::CLASSIFY:
+                return "CLASSIFY";
         }
     }
 }

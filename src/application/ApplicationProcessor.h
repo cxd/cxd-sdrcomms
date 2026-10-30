@@ -52,11 +52,7 @@ private:
     sdrcomms::ModelFileSpec modelSpec {};
     std::vector<sdrcomms::ProcessorOps> processorOps {};
 
-    std::unique_ptr<sdrcomms::ModelFileLoader> modelFileLoader;
-
-
     std::unique_ptr<sdrcomms::SampleStreamerProcessor> sampleStreamerProcessor;
-    std::unique_ptr<sdrcomms::FFTSampleProcessor> fftProcessor;
 
     std::shared_ptr<sdrcomms::SampleProcessor> processingChain;
 
@@ -76,9 +72,15 @@ private:
     std::vector<sdrcomms::ProcessorOps> get_operations();
 
     /**
+     * initialise the model processor.
+     * @return
+     */
+    std::shared_ptr<sdrcomms::SampleProcessor> make_model_processor();
+
+    /**
      * build the processing chain.
      */
-    std::shared_ptr<sdrcomms::SampleProcessor> build_processing_chain();
+    std::shared_ptr<sdrcomms::SampleProcessor> build_processing_chain(std::shared_ptr<SampleProcessor> lastProcessor);
 
 
 

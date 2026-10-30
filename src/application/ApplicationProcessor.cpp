@@ -7,6 +7,7 @@
 #include <iostream>
 #include <ranges>
 
+#include "ClassificationModelProcessor.h"
 #include "constants.h"
 #include "DownsampleProcessor.h"
 
@@ -26,35 +27,18 @@ ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udp
      * @return
      */
 bool ApplicationProcessor::init() {
-    if (!load_model()) {
-        return false;
-    }
+    // load the json model file and the model file.
+    modelSpec = sdrcomms::ModelFileSpec::from_file(modelSpecFile);
+
     // load the process operations.
     processorOps = get_operations();
+    // create the internal classification model processor
+    std::shared_ptr<sdrcomms::SampleProcessor> last_processor = make_model_processor();
     // processors defined by the model spec file.
-    processingChain = build_processing_chain();
+    processingChain = build_processing_chain(last_processor);
     // udp stream processing chain
     this->sampleStreamerProcessor = std::make_unique<sdrcomms::SampleStreamerProcessor>(udpServerAddress, udpPort);
 
-    return true;
-}
-
-/**
-    * initialise the model.
-    * @return
-    */
-bool ApplicationProcessor::load_model() {
-    // load the json model file and the model file.
-    modelSpec = sdrcomms::ModelFileSpec::from_file(modelSpecFile);
-    if (basePath.ends_with('/')) {
-        basePath.pop_back();
-    }
-    modelPath = basePath + "/" + modelSpec.onnx_file;
-    modelFileLoader = std::make_unique<sdrcomms::ModelFileLoader>(basePath, modelSpec);
-    if (!modelFileLoader->load_model()) {
-        std::cerr << "Failed to load model file: " << modelPath << "/" << modelSpec.onnx_file << std::endl;
-        return false;
-    }
     return true;
 }
 
@@ -75,11 +59,27 @@ std::vector<sdrcomms::ProcessorOps> ApplicationProcessor::get_operations() {
 }
 
 /**
+     * initialise the model processor.
+     * @return
+     */
+std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::make_model_processor() {
+    std::string op = sdrcomms::operation_to_string(sdrcomms::ProcessorOps::CLASSIFY);
+    std::shared_ptr<sdrcomms::ClassificationModelProcessor> processor = std::make_shared<sdrcomms::ClassificationModelProcessor>(op,
+        basePath,
+        modelSpec);
+    if (!processor->init()) {
+        return nullptr;
+    }
+    return processor;
+}
+
+
+/**
  * build the processing chain.
  * We will have to work backwards from the last item in the processing ops back to the first.
  */
-std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::build_processing_chain() {
-    std::shared_ptr<SampleProcessor> lastProcessor = nullptr;
+std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::build_processing_chain(std::shared_ptr<SampleProcessor> lastProcessor) {
+
     for (auto op: processorOps | std::ranges::views::reverse) {
         if (op == sdrcomms::ProcessorOps::DOWNSAMPLE) {
             const std::shared_ptr<SampleProcessor> next = std::make_shared<sdrcomms::DownsampleProcessor>(
@@ -128,20 +128,11 @@ void ApplicationProcessor::process(sdrcomms::IQBlock &block) {
         this->blocks_per_second = 0;
     }
     this->blocks_per_second++;
-
-
-
     // processing chain
-    // TODO: need to debug the downsample operation it is not producing the right length of output
     this->processingChain->process(block);
     // streaming iq samples
     this->sampleStreamerProcessor->process(block);
 
-    // TODO: we should add a signal detection mechanism to determine if the classifier should be called.
-    // execute classification.
-    this->collectAttachments(block);
-    std::vector<float> probabilities = modelFileLoader->predict(block);
-    // TODO: we need to pick the maximum index and read the class label for that index from the class labels file.
-    // that could be done as part of prediction method inside modelFileLoader.
+
 
 }

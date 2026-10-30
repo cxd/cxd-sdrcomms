@@ -178,7 +178,9 @@ add_library(client_static STATIC include/client.h
         include/ModelFileLoader.h
         DownsampleProcessor.cpp
         include/DownsampleProcessor.h
-        include/ProcessorOps.h)
+        include/ProcessorOps.h
+        ClassificationModelProcessor.cpp
+        include/ClassificationModelProcessor.h)
 
 # 2. If the option is turned ON, inject a preprocessor macro into the C++ compiler
 if (ENABLE_SDR_DEBUG)
