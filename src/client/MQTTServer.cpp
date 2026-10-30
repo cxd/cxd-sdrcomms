@@ -172,7 +172,7 @@ namespace sdrcomms {
             ControlMessage controlMessage{};
             if (sendToClientQueue->pop(controlMessage)) {
                 // we want to publish the message to a topic.
-                std::string topic = message_type_to_string(controlMessage.type);
+                std::string topic = controlMessage.message_type_to_string();
                 send_control_command(topic, controlMessage);
             }
             std::this_thread::sleep_for(std::chrono::microseconds(200));

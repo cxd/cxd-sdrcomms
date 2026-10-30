@@ -19,24 +19,6 @@ namespace sdrcomms {
         MSG_CLASSIFY = 6,
     };
 
-     std::string message_type_to_string(const MessageType &msgType) {
-         switch (msgType) {
-             case MessageType::MSG_ACK:
-                 return "ack";
-             case MessageType::MSG_NACK:
-                 return "nack";
-             case MessageType::MSG_AUTO_SCAN:
-                 return "auto_scan";
-             case MessageType::MSG_STOP_SCAN:
-                 return "stop_scan";
-             case MessageType::MSG_SET_FREQ:
-                 return "set_freq";
-             case MessageType::MSG_CLASSIFY:
-                 return "classify";
-             default:
-                 return "none";
-         }
-     }
 
     enum class MessageResult {
         MSG_NONE = 0,
@@ -83,6 +65,25 @@ namespace sdrcomms {
         }
 
 
+
+        std::string message_type_to_string() {
+            switch (this->type) {
+                case MessageType::MSG_ACK:
+                    return "ack";
+                case MessageType::MSG_NACK:
+                    return "nack";
+                case MessageType::MSG_AUTO_SCAN:
+                    return "auto_scan";
+                case MessageType::MSG_STOP_SCAN:
+                    return "stop_scan";
+                case MessageType::MSG_SET_FREQ:
+                    return "set_freq";
+                case MessageType::MSG_CLASSIFY:
+                    return "classify";
+                default:
+                    return "none";
+            }
+        }
 
 
     };

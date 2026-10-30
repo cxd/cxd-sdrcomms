@@ -18,8 +18,9 @@ namespace sdrcomms {
          * @param basePath
          * @param modelFileSpec
          */
-    ModelFileLoader::ModelFileLoader(std::string basePath, const ModelFileSpec &modelFileSpec) {
+    ModelFileLoader::ModelFileLoader(std::string basePath, const ModelFileSpec &modelFileSpec, std::vector<ProcessorOps> &processorOps) {
         this->modelFileSpec = modelFileSpec;
+        this->processorOps = processorOps;
         this->modelBasePath = basePath;
         if (basePath.ends_with("/")) {
             this->modelFilePath = basePath + modelFileSpec.onnx_file;
@@ -171,16 +172,16 @@ namespace sdrcomms {
      * @param input
      * @return
      */
-    std::vector<float> ModelFileLoader::predict(const IQBlock &input) {
+    std::vector<float> ModelFileLoader::predict(const IQBlock &input, std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> &attachments) {
         if (session == nullptr) {
             return {};
         }
 
-        if (!check_model_input_attachments(input)) {
+        if (!check_model_input_attachments(attachments)) {
             return {};
         }
         // first determine if the keys added into the input block attachments match the data input required for the model.
-        if (!check_model_input_attachments(input)) {
+        if (!check_model_input_attachments(attachments)) {
             // inputs are not supplied
 #ifdef DEBUG_VERBOSE
             std::cerr << "Model input attachments do not match the required input for the model." << std::endl;
@@ -188,7 +189,7 @@ namespace sdrcomms {
             return {};
         }
         // now we need to extract all input blocks
-        auto input_blocks = get_input_block_attachments(input);
+        auto input_blocks = get_input_block_attachments(attachments);
         auto input_data = get_input_data(input_blocks);
         // now we want to use this input data as the input to the model.
         return predict(input_data);
@@ -350,9 +351,9 @@ namespace sdrcomms {
          * @param block
          * @return
          */
-    bool ModelFileLoader::check_model_input_attachments(const IQBlock &block) const {
+    bool ModelFileLoader::check_model_input_attachments(std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> &attachments) const {
         auto expected_keys = modelFileSpec.getTransforms() | std::ranges::to<std::set<std::string> >();
-        auto actual_keys = std::views::keys(block.attachments) | std::ranges::to<std::set<std::string> >();
+        auto actual_keys = std::views::keys(attachments) | std::ranges::to<std::set<std::string> >();
         bool matches = std::ranges::includes(actual_keys, expected_keys);
         return matches;
     }
@@ -363,11 +364,11 @@ namespace sdrcomms {
      * @return
      */
     std::map<std::string, std::shared_ptr<IQBlock> >
-    ModelFileLoader::get_input_block_attachments(const IQBlock &block) {
+    ModelFileLoader::get_input_block_attachments(std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> &attachments) {
         std::map<std::string, std::shared_ptr<IQBlock> > input_blocks{};
         auto expected_keys = modelFileSpec.getTransforms() | std::ranges::to<std::set<std::string> >();
         for (auto key: expected_keys) {
-            auto inner = block.attachments.at(key);
+            auto inner = attachments.at(key);
             input_blocks[key] = inner;
         }
         return input_blocks;
@@ -385,7 +386,8 @@ namespace sdrcomms {
         // into two vectors of real and imaginary numbers
         // then add those sequentially into the outer vector.
         // this is expected to create a 2d matrix
-        for (auto key: modelFileSpec.input_transforms) {
+        for (auto op_label: processorOps) {
+            std::string key = operation_to_string(op_label);
             std::shared_ptr<IQBlock> inner = input.at(key);
             size_t n = inner->samples.size();
             std::vector<float> re(n);

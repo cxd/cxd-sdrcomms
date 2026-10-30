@@ -12,7 +12,7 @@ class MockProcessor : public sdrcomms::SampleProcessor {
 public:
     MockProcessor();
 
-    void process(sdrcomms::IQBlock &block) override;
+    void process(sdrcomms::IQBlock &block, std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> &attachments) override;
 
 private:
     std::chrono::steady_clock::time_point last;

@@ -6,6 +6,7 @@
 #define SDRCOMMS_MODELFILELOADER_H
 #include "IQBlock.h"
 #include "ModelFileSpec.h"
+#include "ProcessorOps.h"
 #include "onnxruntime/onnxruntime_cxx_api.h"
 
 namespace sdrcomms {
@@ -17,7 +18,7 @@ namespace sdrcomms {
          * @param basePath
          * @param modelFileSpec
          */
-        ModelFileLoader(std::string basePath, const ModelFileSpec& modelFileSpec);
+        ModelFileLoader(std::string basePath, const ModelFileSpec& modelFileSpec, std::vector<ProcessorOps> &processorOps );
 
         ~ModelFileLoader() = default;
 
@@ -39,7 +40,7 @@ namespace sdrcomms {
          * @param input
          * @return
          */
-        std::vector<float> predict(const IQBlock& input);
+        std::vector<float> predict(const IQBlock& input, std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> &attachments);
 
         /**
          * predict with 2d input vectors
@@ -59,6 +60,7 @@ namespace sdrcomms {
         std::string modelBasePath;
         std::string modelFilePath;
         ModelFileSpec modelFileSpec;
+        std::vector<ProcessorOps> processorOps {};
         Ort::Env& env = global_env();
         std::shared_ptr<Ort::Session> session;
         std::vector<int64_t> inputNodeDims;
@@ -71,9 +73,9 @@ namespace sdrcomms {
          * @param block
          * @return
          */
-        bool check_model_input_attachments(const IQBlock & block) const;
+        bool check_model_input_attachments(std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> &attachments) const;
 
-        std::map<std::string, std::shared_ptr<IQBlock>> get_input_block_attachments(const IQBlock &block);
+        std::map<std::string, std::shared_ptr<IQBlock>> get_input_block_attachments(std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> &attachments);
 
         /**
          * extract the series of  values from the preprocessed input blocks expected by the model.

@@ -34,7 +34,7 @@ namespace sdrcomms {
     public:
         SampleStreamerProcessor(std::string udpServerAddress, int udpPort);
 
-        void process(IQBlock &block) override;
+        void process(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) override;
 
         /**
          * start the server process.

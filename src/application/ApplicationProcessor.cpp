@@ -13,13 +13,15 @@
 
 ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udpPort, double source_sample_rate_hz,
                                            std::string modelFile,
-                                           std::string basePath) {
+                                           std::string basePath,
+                                           std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> eventQueue) {
     this->udpServerAddress = udpServerAddress;
     this->udpPort = udpPort;
     this->source_sample_rate_hz = source_sample_rate_hz;
     this->modelSpecFile = modelFile;
     this->basePath = basePath;
     this->modelPath = "";
+    this->eventQueue = eventQueue;
 }
 
 /**
@@ -66,7 +68,9 @@ std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::make_model_proc
     std::string op = sdrcomms::operation_to_string(sdrcomms::ProcessorOps::CLASSIFY);
     std::shared_ptr<sdrcomms::ClassificationModelProcessor> processor = std::make_shared<sdrcomms::ClassificationModelProcessor>(op,
         basePath,
-        modelSpec);
+        modelSpec,
+        processorOps,
+        eventQueue);
     if (!processor->init()) {
         return nullptr;
     }
@@ -84,7 +88,7 @@ std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::build_processin
         if (op == sdrcomms::ProcessorOps::DOWNSAMPLE) {
             const std::shared_ptr<SampleProcessor> next = std::make_shared<sdrcomms::DownsampleProcessor>(
                 sdrcomms::operation_to_string(op),
-                sdrcomms::REQUIRED_SAMPLES, // default samples captured by the device.
+                modelSpec.input_length, // the target sample size needed for the classifier.
                 source_sample_rate_hz,
                 modelSpec.sample_rate_hz,
                 lastProcessor);
@@ -117,7 +121,7 @@ void ApplicationProcessor::stopServer() {
      * implement the process method
      * @param block
      */
-void ApplicationProcessor::process(sdrcomms::IQBlock &block) {
+void ApplicationProcessor::process(sdrcomms::IQBlock &block, std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> &attachments) {
     auto now = std::chrono::system_clock::now();
     auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->last_packet).count();
     if (delta >= ONE_SECOND) {
@@ -129,9 +133,9 @@ void ApplicationProcessor::process(sdrcomms::IQBlock &block) {
     }
     this->blocks_per_second++;
     // processing chain
-    this->processingChain->process(block);
+    this->processingChain->process(block, attachments);
     // streaming iq samples
-    this->sampleStreamerProcessor->process(block);
+    this->sampleStreamerProcessor->process(block, attachments);
 
 
 

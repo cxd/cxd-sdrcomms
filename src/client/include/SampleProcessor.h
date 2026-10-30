@@ -13,10 +13,24 @@ namespace sdrcomms {
          * process the supplied IQBlock
          * @param block
          */
-        virtual void process(IQBlock &block) = 0;
+        virtual void process(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) = 0;
 
     protected:
         std::string attach_key;
+
+        /**
+         * forward attachments along the chain to the inner block
+         * this passes the attachments from the parent block to the inner block
+         * so they can be used by the next processor in the chain
+         * @param block
+         * @param attach_key
+         * @param innerBlock
+         */
+        void forwardAttachments(IQBlock &block, std::string attach_key, std::shared_ptr<IQBlock> innerBlock) {
+            collectAttachments(block);
+            auto attachments = block.attachments;
+            innerBlock->attachments = attachments;
+        }
 
         /**
          * walk the attachments of the supplied block and lift them into the current top level block.
@@ -43,7 +57,13 @@ namespace sdrcomms {
          * @param block
          */
         void foldAttachments(std::map<std::string, std::shared_ptr<IQBlock>> &accum, const std::shared_ptr<IQBlock> &block) {
+            if (block == nullptr) {
+                return;
+            }
             for (auto &[key, value] : block->attachments) {
+                if (accum.contains(key)) {
+                    continue;
+                }
                 accum.insert_or_assign(key, value);
                 if (value->attachments.size() > 0) {
                     foldAttachments(accum, value);

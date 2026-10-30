@@ -13,16 +13,16 @@ namespace sdrcomms {
          * @param target_rate_hz
          * @param inner
          */
-    DownsampleProcessor::DownsampleProcessor(std::string attach_key, size_t input_samples_size, double source_rate_hz,
+    DownsampleProcessor::DownsampleProcessor(std::string attach_key, size_t target_samples_size, double source_rate_hz,
                                              double target_rate_hz, std::shared_ptr<SampleProcessor> inner) {
         this->attach_key = attach_key;
         this->source_rate_hz = source_rate_hz;
         this->target_rate_hz = target_rate_hz;
         this->inner = inner;
         this->accumulator = nullptr;
-        this->input_sample_size = input_samples_size;
+        this->target_samples_size = target_samples_size;
         this->required_input_samples = static_cast<size_t>(std::ceil(
-            input_samples_size / (source_rate_hz / target_rate_hz)));
+            target_samples_size / (target_rate_hz / source_rate_hz)));
     }
 
     /**
@@ -46,23 +46,26 @@ namespace sdrcomms {
      * The remainder of the last whole block needs to be added to the front of the accumulator.
      * @param block
      */
-    void DownsampleProcessor::process(IQBlock &block) {
+    void DownsampleProcessor::process(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) {
         // initialise the first pointer
         if (accumulator == nullptr) {
             accumulator = std::make_shared<IQBlock>(block);
             return;
         }
-        if (accumulator->samples.size() + block.samples.size() >= input_sample_size) {
+        if (accumulator->samples.size() + block.samples.size() >= required_input_samples) {
             // add the block samples to the accumulator
             accumulator->samples.insert(accumulator->samples.end(), block.samples.begin(), block.samples.end());
             // we can perform resampling here.
             // extract the required range of samples
-            size_t delta = accumulator->samples.size() - input_sample_size;
+            size_t delta = accumulator->samples.size() - required_input_samples;
             std::vector<std::complex<float> > samples{};
-            if (delta > 0) {
-                samples.insert(samples.begin(), accumulator->samples.begin(), accumulator->samples.end() - delta);
+            samples.insert(samples.begin(), accumulator->samples.begin(), accumulator->samples.end() - delta);
+            float downsampleRatio = target_rate_hz / source_rate_hz;
+            std::vector<std::complex<float> > output_iq = downsample(samples, downsampleRatio, target_samples_size);
+            if (output_iq.size() == 0) {
+                accumulator = nullptr;
+                return;
             }
-            std::vector<std::complex<float> > output_iq = downsample(samples, target_rate_hz / source_rate_hz);
             // attach the result
             // int channel, long long timestampMs, size_t sample_size, const std::vector<std::complex<float>> &samples
             std::shared_ptr<IQBlock> innerBlock = std::make_shared<IQBlock>(
@@ -72,8 +75,10 @@ namespace sdrcomms {
                 output_iq.size(),
                 std::move(output_iq));
             innerBlock->centerFreq = block.centerFreq;
+            // previous attachments
+            //
             // we can add fft transformation as a processed attribute
-            block.attachments.insert_or_assign(attach_key, innerBlock);
+            attachments.insert_or_assign(attach_key, innerBlock);
 
             // reset the accumulator timestamp to the block timestamp.
             std::vector<std::complex<float> > subset{};
@@ -87,7 +92,7 @@ namespace sdrcomms {
                                                           subset);
 
             if (this->inner != nullptr) {
-                this->inner->process(*innerBlock);
+                this->inner->process(*innerBlock, attachments);
             }
         } else {
             accumulator->samples.insert(accumulator->samples.end(), block.samples.begin(), block.samples.end());
@@ -101,56 +106,44 @@ namespace sdrcomms {
          * @return
          */
     std::vector<std::complex<float> > DownsampleProcessor::downsample(const std::vector<std::complex<float> > &input_iq,
-                                                                      float downsampleRatio) {
-        // Asymmetry parameter (stop-band attenuation in dB).
-        // 60dB reduces out-of-band aliasing noise by a factor of 1,000.
-        // 80dB is excellent for high-fidelity audio/radio environments.
-        float stop_band_attenuation = 60.0f;
-        // initialise multistage resampler
-        // 'crcf' stands for: Complex input, Real coefficients, Complex output, Floating point
-        msresamp_crcf resampler = msresamp_crcf_create(downsampleRatio, stop_band_attenuation);
-        float delay = msresamp_crcf_get_delay(resampler);
+                                                                      float downsampleRatio,
+                                                                      size_t targetOutputSize) {
+        size_t decimation_factor = static_cast<size_t>(std::round(1.0f / downsampleRatio)); // e.g. 4000
 
-        /**
-         * input_n = out_n / r
-         *
-         * where r is the downsample ratio
-         */
+        // Design a low-pass filter to prevent aliasing at the new low rate
+        // A standard filter length of 64 or 128 coefficients is plenty for clean rejection
+        unsigned int h_len = 129;
+        std::vector<float> h(h_len);
 
-        // allocate a vector slightly larger than the actual target size
-        size_t target_size = static_cast<unsigned int>(std::lround(input_iq.size() * downsampleRatio));
+        // liquid-dsp helper to create lowpass coefficients on the fly
+        // Cutoff frequency is half of our target downsampled bandwidth
+        liquid_firdes_kaiser(h_len, downsampleRatio * 0.5f, 60.0f, 0.0f, h.data());
 
-        size_t delay_samples = static_cast<size_t>(std::ceil(delay / downsampleRatio) + 1);
-        std::vector<std::complex<float> > input_copy(delay_samples + input_iq.size(), {0.0f, 0.0f});
-        // append to the beginning of the vector
-        std::copy(input_iq.begin(), input_iq.end(), input_copy.begin());
+        std::vector<std::complex<float>> output_iq;
+        output_iq.reserve(targetOutputSize);
 
-        // liquid recommends at least ceil(1 + 2 * r * nx) output samples
-        size_t max_output_size = static_cast<size_t>(std::ceil(1 + 2 * downsampleRatio * input_copy.size()));
-        std::vector<std::complex<float> > output_iq(max_output_size);
+        // Calculate the structural delay of the filter coefficients
+        size_t filter_delay = (h_len - 1) / 2;
 
+        // Apply the filter only at the exact decimated steps (Polyphase style)
+        for (size_t i = filter_delay; i < input_iq.size() && output_iq.size() < targetOutputSize; i += decimation_factor) {
+            std::complex<float> filtered_sample(0.0f, 0.0f);
 
-        // Because std::complex<float> is guaranteed by the C++ standard to be layout-compatible
-        // with a two-element float array [real, imag], we can safely perform a zero-copy pointer cast.
-        const liquid_float_complex *type_safe_input = reinterpret_cast<const liquid_float_complex *>(input_copy.data());
-        liquid_float_complex *type_safe_output = reinterpret_cast<liquid_float_complex *>(output_iq.data());
-
-        unsigned int num_samples_written = 0;
-        // the time-domain polyphase processing loop
-        msresamp_crcf_execute(resampler,
-                              const_cast<liquid_float_complex *>(type_safe_input),
-                              input_iq.size(),
-                              type_safe_output,
-                              &num_samples_written);
-        // Clean up the internal filter object memory handles
-        msresamp_crcf_destroy(resampler);
-        // drop the filter start-up transient so the output aligns with the input,
-        // then cut the flushed tail back to the expected length.
-        size_t skip = std::min(static_cast<size_t>(std::lround(delay)), output_iq.size());
-        output_iq.erase(output_iq.begin(), output_iq.begin() + skip);
-        if (output_iq.size() > target_size) {
-            output_iq.resize(target_size);
+            // Convolve the filter window over the input
+            for (unsigned int g = 0; g < h_len; ++g) {
+                size_t idx = i + g - filter_delay;
+                if (idx < input_iq.size()) {
+                    filtered_sample += input_iq[idx] * h[g];
+                }
+            }
+            output_iq.push_back(filtered_sample);
         }
+
+        // Force perfect sizing match for the classifier
+        if (output_iq.size() < targetOutputSize) {
+            output_iq.resize(targetOutputSize, {0.0f, 0.0f});
+        }
+
         return output_iq;
     }
 } // sdrcomms

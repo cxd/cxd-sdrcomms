@@ -10,14 +10,17 @@
 #include "IQBlock.h"
 #include <chrono>
 
+#include "ControlMessage.h"
 #include "FFTSampleProcessor.h"
+#include "MessageQueue.h"
 #include "MockProcessor.h"
 #include "ModelFileLoader.h"
 #include "SampleStreamerProcessor.h"
 
 class ApplicationProcessor : public sdrcomms::SampleProcessor {
 public:
-    ApplicationProcessor(std::string udpServerAddress, int udpPort, double source_sample_rate_hz, std::string modelFile, std::string basePath);
+    ApplicationProcessor(std::string udpServerAddress, int udpPort, double source_sample_rate_hz, std::string modelFile, std::string basePath,
+         std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> eventQueue );
 
     /**
      * initialise the application processor.
@@ -29,7 +32,7 @@ public:
      * implement the process method
      * @param block
      */
-    void process(sdrcomms::IQBlock &block) override;
+    void process(sdrcomms::IQBlock &block, std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> &attachments) override;
 
     /**
      * expose start server
@@ -49,6 +52,9 @@ private:
     std::string basePath;
     std::string modelSpecFile;
     double source_sample_rate_hz = sdrcomms::DEFAULT_CENTER_FREQUENCY;
+
+    std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> eventQueue;
+
     sdrcomms::ModelFileSpec modelSpec {};
     std::vector<sdrcomms::ProcessorOps> processorOps {};
 

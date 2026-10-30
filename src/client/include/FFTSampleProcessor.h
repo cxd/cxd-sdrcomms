@@ -13,7 +13,7 @@ namespace sdrcomms {
     public:
         FFTSampleProcessor(std::string attach_key, size_t fftSize, std::shared_ptr<SampleProcessor> inner );
 
-        void process(IQBlock &block) override;
+        void process(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) override;
 
     private:
         size_t fftSize;

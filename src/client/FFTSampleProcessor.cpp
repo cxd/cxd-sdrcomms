@@ -15,7 +15,7 @@ namespace sdrcomms {
         }
     }
 
-    void FFTSampleProcessor::process(IQBlock &block) {
+    void FFTSampleProcessor::process(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) {
         if (this->isInit.load(std::memory_order_relaxed)) {
             // test processing the fft.
             std::vector<std::complex<float>> fftOut = this->fft->fft(block.samples);
@@ -28,10 +28,9 @@ namespace sdrcomms {
                 std::move(fftOut));
             innerBlock->centerFreq = block.centerFreq;
             // we can add fft transformation as a processed attribute
-            block.attachments.insert_or_assign(attach_key, innerBlock);
-
+            attachments.insert_or_assign(attach_key, innerBlock);
             if (this->inner != nullptr) {
-                this->inner->process(*innerBlock);
+                this->inner->process(*innerBlock, attachments);
             }
         }
     }

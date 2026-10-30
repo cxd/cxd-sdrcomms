@@ -444,7 +444,8 @@ namespace sdrcomms {
                         std::cout << "[" << channel << "] Process block: " << block.samples.size() << std::endl;
 #endif
                         // execute the callback
-                        processor->process(block);
+                        std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> attachments {};
+                        processor->process(block, attachments);
                     } catch (std::exception &e) {
                         std::cerr << "[" << channel << "] Exception in callback: " << e.what() << std::endl;
                     }

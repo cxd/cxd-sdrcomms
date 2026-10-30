@@ -14,7 +14,7 @@ namespace sdrcomms {
 
         SampleProcessorImpl(std::string attach_key, std::shared_ptr<SampleProcessor> inner);
 
-        void process(IQBlock &block) override;
+        void process(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) override;
 
     private:
         std::shared_ptr<SampleProcessor> inner;
