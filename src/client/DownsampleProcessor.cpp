@@ -4,6 +4,7 @@
 
 #include "include/DownsampleProcessor.h"
 #include <liquid/liquid.h>
+
 namespace sdrcomms {
     /**
          * initialise with an attach key.
@@ -12,7 +13,8 @@ namespace sdrcomms {
          * @param target_rate_hz
          * @param inner
          */
-    DownsampleProcessor::DownsampleProcessor(std::string attach_key, size_t input_samples_size, double source_rate_hz, double target_rate_hz, std::shared_ptr<SampleProcessor> inner) {
+    DownsampleProcessor::DownsampleProcessor(std::string attach_key, size_t input_samples_size, double source_rate_hz,
+                                             double target_rate_hz, std::shared_ptr<SampleProcessor> inner) {
         this->attach_key = attach_key;
         this->source_rate_hz = source_rate_hz;
         this->target_rate_hz = target_rate_hz;
@@ -49,17 +51,18 @@ namespace sdrcomms {
         if (accumulator == nullptr) {
             accumulator = std::make_shared<IQBlock>(block);
             return;
-        } else if (accumulator->samples.size() + block.samples.size() >= input_sample_size) {
+        }
+        if (accumulator->samples.size() + block.samples.size() >= input_sample_size) {
             // add the block samples to the accumulator
             accumulator->samples.insert(accumulator->samples.end(), block.samples.begin(), block.samples.end());
             // we can perform resampling here.
             // extract the required range of samples
             size_t delta = accumulator->samples.size() - input_sample_size;
-            std::vector<std::complex<float>> samples {};
+            std::vector<std::complex<float> > samples{};
             if (delta > 0) {
                 samples.insert(samples.begin(), accumulator->samples.begin(), accumulator->samples.end() - delta);
             }
-            std::vector<std::complex<float>> output_iq = downsample(samples, target_rate_hz/source_rate_hz);
+            std::vector<std::complex<float> > output_iq = downsample(samples, target_rate_hz / source_rate_hz);
             // attach the result
             // int channel, long long timestampMs, size_t sample_size, const std::vector<std::complex<float>> &samples
             std::shared_ptr<IQBlock> innerBlock = std::make_shared<IQBlock>(
@@ -73,15 +76,15 @@ namespace sdrcomms {
             block.attachments.insert_or_assign(attach_key, innerBlock);
 
             // reset the accumulator timestamp to the block timestamp.
-            std::vector<std::complex<float>> subset {};
+            std::vector<std::complex<float> > subset{};
             if (delta > 0) {
                 subset.insert(subset.begin(), accumulator->samples.end() - delta, accumulator->samples.end());
             }
             // copy the remaining subset of the data into the next accumulator.
             this->accumulator = std::make_shared<IQBlock>(block.channel,
-                block.timestampMs,
-                block.sample_size,
-                subset);
+                                                          block.timestampMs,
+                                                          block.sample_size,
+                                                          subset);
 
             if (this->inner != nullptr) {
                 this->inner->process(*innerBlock);
@@ -89,8 +92,6 @@ namespace sdrcomms {
         } else {
             accumulator->samples.insert(accumulator->samples.end(), block.samples.begin(), block.samples.end());
         }
-
-
     }
 
     /**
@@ -99,7 +100,8 @@ namespace sdrcomms {
          * @param downsampleRatio
          * @return
          */
-    std::vector<std::complex<float>> DownsampleProcessor::downsample(const std::vector<std::complex<float>>& input_iq, float downsampleRatio) {
+    std::vector<std::complex<float> > DownsampleProcessor::downsample(const std::vector<std::complex<float> > &input_iq,
+                                                                      float downsampleRatio) {
         // Asymmetry parameter (stop-band attenuation in dB).
         // 60dB reduces out-of-band aliasing noise by a factor of 1,000.
         // 80dB is excellent for high-fidelity audio/radio environments.
@@ -118,25 +120,25 @@ namespace sdrcomms {
         // allocate a vector slightly larger than the actual target size
         size_t target_size = static_cast<unsigned int>(std::lround(input_iq.size() * downsampleRatio));
 
-        size_t delay_samples = static_cast<size_t>(std::ceil(delay/downsampleRatio) + 1);
-        std::vector<std::complex<float>> input_copy(delay_samples + input_iq.size(), {0.0f, 0.0f});
+        size_t delay_samples = static_cast<size_t>(std::ceil(delay / downsampleRatio) + 1);
+        std::vector<std::complex<float> > input_copy(delay_samples + input_iq.size(), {0.0f, 0.0f});
         // append to the beginning of the vector
         std::copy(input_iq.begin(), input_iq.end(), input_copy.begin());
 
         // liquid recommends at least ceil(1 + 2 * r * nx) output samples
         size_t max_output_size = static_cast<size_t>(std::ceil(1 + 2 * downsampleRatio * input_copy.size()));
-        std::vector<std::complex<float>> output_iq(max_output_size);
+        std::vector<std::complex<float> > output_iq(max_output_size);
 
 
         // Because std::complex<float> is guaranteed by the C++ standard to be layout-compatible
         // with a two-element float array [real, imag], we can safely perform a zero-copy pointer cast.
-        const liquid_float_complex* type_safe_input = reinterpret_cast<const liquid_float_complex*>(input_copy.data());
-        liquid_float_complex* type_safe_output = reinterpret_cast<liquid_float_complex*>(output_iq.data());
+        const liquid_float_complex *type_safe_input = reinterpret_cast<const liquid_float_complex *>(input_copy.data());
+        liquid_float_complex *type_safe_output = reinterpret_cast<liquid_float_complex *>(output_iq.data());
 
         unsigned int num_samples_written = 0;
         // the time-domain polyphase processing loop
         msresamp_crcf_execute(resampler,
-                              const_cast<liquid_float_complex*>(type_safe_input),
+                              const_cast<liquid_float_complex *>(type_safe_input),
                               input_iq.size(),
                               type_safe_output,
                               &num_samples_written);
@@ -151,5 +153,4 @@ namespace sdrcomms {
         }
         return output_iq;
     }
-
 } // sdrcomms

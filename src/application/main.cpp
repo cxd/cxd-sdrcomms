@@ -130,6 +130,11 @@ int main(int argc, char **argv) {
     }
     client->SetSampleRateMSps(sdrcomms::DEFAULT_SAMPLE_RATE_HZ);
     client->SetCenterFrequency(sdrcomms::DEFAULT_CENTER_FREQUENCY);
+
+
+    // the message queue used to send to clients
+    std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> sendToClientQueue = std::make_shared<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> (sdrcomms::DEFAULT_QUEUE_SIZE);
+
     auto processor = std::make_shared<ApplicationProcessor>(udpServerUri, udp_stream_port, sdrcomms::DEFAULT_CENTER_FREQUENCY,
         modelSpecFile, modelPath);
     // initialise the application processor.
@@ -150,7 +155,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     // we want to initialise the mqtt server to handle control channel communications.
-    std::shared_ptr<sdrcomms::MQTTServer> mqttServer = std::make_shared<sdrcomms::MQTTServer>(mqttServerUri, mqtt_port);
+    std::shared_ptr<sdrcomms::MQTTServer> mqttServer = std::make_shared<sdrcomms::MQTTServer>(mqttServerUri, mqtt_port, sendToClientQueue);
     if (!mqttServer->init() || !mqttServer->start()) {
         std::cerr << "Could not connect to mqtt service: " << mqttServerUri << ":" << mqtt_port << std::endl;
         mqttServer->stop();

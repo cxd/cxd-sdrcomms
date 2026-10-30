@@ -14,7 +14,7 @@
 namespace sdrcomms {
     class MQTTServer {
     public:
-        MQTTServer(std::string serverAddress, int port);
+        MQTTServer(std::string serverAddress, int port, std::shared_ptr<MessageQueue<ControlMessage>> sendToClientQueue);
 
         bool init();
         bool start();
@@ -32,10 +32,18 @@ namespace sdrcomms {
         std::atomic<bool> running;
         std::atomic<bool> isInit;
         std::thread serverThread;
-
+        std::thread workerThread;
         mosquitto* mServer;
 
+        /**
+         * messages arriving from clients external to this process
+         */
         std::shared_ptr<MessageQueue<ControlMessage>> messageQueue;
+
+        /**
+         * messages arriving from this process to send to clients external to this process
+         */
+        std::shared_ptr<MessageQueue<ControlMessage>> sendToClientQueue;
 
         /**
          * handle connections to the server process
@@ -60,6 +68,19 @@ namespace sdrcomms {
          * @param message
          */
         void on_message(struct mosquitto* mosq, void* obj, const struct mosquitto_message* message);
+
+        /**
+         * send a serialized string message over the mosquitto connection
+         * @param target_client
+         * @param command
+         * @param value
+         */
+        void send_control_command(const std::string& message_topic, const ControlMessage& msg);
+
+        /**
+         * a thread to read control messages from the incoming queue and send to clients.
+         */
+        void incoming_message_thread();
     };
 } // sdrcomms
 
