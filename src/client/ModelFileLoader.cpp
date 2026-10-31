@@ -380,7 +380,7 @@ namespace sdrcomms {
          * @return
          */
     std::vector<std::vector<float> > ModelFileLoader::get_input_data(
-        const std::map<std::string, std::shared_ptr<IQBlock> > &input) const {
+        const std::map<std::string, std::shared_ptr<IQBlock> > &input) {
         std::vector<std::vector<float> > input_data{};
         // for each input block transform we convert the each complex block sample vector
         // into two vectors of real and imaginary numbers
@@ -390,21 +390,57 @@ namespace sdrcomms {
             std::string key = operation_to_string(op_label);
             std::shared_ptr<IQBlock> inner = input.at(key);
             size_t n = inner->samples.size();
+
+            // TODO: we first need to normalise the input vector
+            std::vector<std::complex<float>> norm_data = normalise_input_data(inner->samples);
+            // convert to real and imaginary data
             std::vector<float> re(n);
             std::vector<float> im(n);
-            std::ranges::generate(re, [inner, i=0]() mutable {
-                float value = inner->samples[i].real();
+
+            std::ranges::generate(re, [norm_data, i=0]() mutable {
+                float value = norm_data[i].real();
                 i++;
                 return value;
             });
-            std::ranges::generate(im, [inner, i=0]() mutable {
-                float value = inner->samples[i].imag();
+            std::ranges::generate(im, [norm_data, i=0]() mutable {
+                float value = norm_data[i].imag();
                 i++;
                 return value;
             });
+
             input_data.push_back(re);
             input_data.push_back(im);
         }
         return input_data;
     }
+
+
+    /**
+         * normalise the input data.
+        *  f = f / (np.max(np.abs(f), axis=1, keepdims=True) + 1e-9)
+        * z = z / (np.max(np.abs(z), axis=1, keepdims=True) + 1e-9)
+         * @param input
+         * @return
+         */
+    std::vector<std::complex<float>> ModelFileLoader::normalise_input_data(std::vector<std::complex<float>> &input) {
+        // generate the abs values.
+        std::vector<float> abs(input.size());
+        std::ranges::generate(abs, [input, i=0]() mutable {
+                float value = std::abs(input[i]);
+                i++;
+                return value;
+            });
+
+        // get the max value
+        float max_abs = std::ranges::max(abs);
+        std::vector<std::complex<float>> result(input.size());
+        std::ranges::generate(result, [max_abs, input, i=0]() mutable {
+                std::complex<float> value = (input[i] / max_abs) + std::complex<float>{1e-9};
+                i++;
+                return value;
+            });
+        return result;
+
+    }
+
 } // sdrcomms

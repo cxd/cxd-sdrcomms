@@ -6,14 +6,16 @@
 
 #include <iostream>
 
-namespace sdrcomms {
+#include "constants.h"
 
+namespace sdrcomms {
     ClassificationModelProcessor::ClassificationModelProcessor(std::string attach_key,
-        std::string basePath,
-        const ModelFileSpec &modelSpec,
-        const ClassMap &classMap,
-        const std::vector<ProcessorOps> &processorOps,
-        std::shared_ptr<MessageQueue<sdrcomms::ControlMessage>> eventQueue) {
+                                                               std::string basePath,
+                                                               const ModelFileSpec &modelSpec,
+                                                               const ClassMap &classMap,
+                                                               const std::vector<ProcessorOps> &processorOps,
+                                                               std::shared_ptr<MessageQueue<sdrcomms::ControlMessage> >
+                                                               eventQueue) {
         this->attach_key = attach_key;
         this->basePath = basePath;
         this->modelSpec = modelSpec;
@@ -21,6 +23,7 @@ namespace sdrcomms {
         this->processorOps = processorOps;
         // the event queue can be used to post classification events on a separate thread.
         this->eventQueue = eventQueue;
+        this->classifyQueue = std::make_shared<MessageQueue<sdrcomms::IQBlock>>(DEFAULT_QUEUE_SIZE);
     }
 
     /**
@@ -33,6 +36,9 @@ namespace sdrcomms {
             return isInit;
         }
         isRunning.store(true, std::memory_order_relaxed);
+        classifyThread = std::thread([this]() {
+            this->classify_worker();
+        });
         return isInit;
     }
 
@@ -68,14 +74,16 @@ namespace sdrcomms {
          * process the incoming block and update the inner processor.
          * @param block
          */
-    void ClassificationModelProcessor::process(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) {
+    void ClassificationModelProcessor::process(IQBlock &block,
+                                               std::map<std::string, std::shared_ptr<IQBlock> > &attachments) {
         if (!isInit) {
             return;
         }
         // TODO: we should add a signal detection mechanism to determine if the classifier should be called execute classification.
         // signal detection can be run as a processor block before this process block.
-        block.attachments = attachments;
-        this->classifyQueue->push(block);
+        IQBlock copyBlock {block};
+        copyBlock.attachments = attachments;
+        this->classifyQueue->push(copyBlock);
     }
 
 
@@ -84,18 +92,42 @@ namespace sdrcomms {
          */
     void ClassificationModelProcessor::classify_worker() {
         while (isRunning.load(std::memory_order_relaxed)) {
-            IQBlock block {};
+            IQBlock block{};
             if (classifyQueue->pop(block)) {
                 auto attachments = block.attachments;
                 if (attachments.size() > 0) {
                     // perform inference
                     std::vector<float> probabilities = modelFileLoader->predict(block, attachments);
-                    // TODO: get maximum propbabilities
+                    auto max_it = std::ranges::max_element(probabilities);
+                    if (max_it == probabilities.end()) {
+                        continue;
+                    }
+                    // confidence value of
+                    float confidence = *max_it;
+                    size_t argmax = std::distance(probabilities.begin(), max_it);
+                    // identify the class label
+                    auto class_itr = std::find_if(classMap.classMap.begin(), classMap.classMap.end(),
+                                                  [argmax](const auto &pair) {
+                                                      return pair.second == argmax;
+                                                  });
+                    if (class_itr != classMap.classMap.end()) {
+                        // post classification message into the event queue
+                        std::string classLabel = class_itr->first;
+                        std::cout << "Block Timestamp: " << block.timestampMs << " Center Freq: " << block.centerFreq << " Class: " << classLabel << " confidence: " << confidence << std::endl;
+                        ControlMessage msg{
+                            MessageType::MSG_CLASSIFY,
+                            MessageResult::MSG_NONE,
+                            block.centerFreq,
+                            classLabel,
+                            confidence,
+                            block.channel,
+                            block.timestampMs
+                        };
 
-                    // TODO: post classification message into the event queue
-
+                        // post the classification message into the event queue
+                        this->eventQueue->push(msg);
+                    }
                 }
-
             }
         }
     }

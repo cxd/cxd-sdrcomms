@@ -82,7 +82,16 @@ namespace sdrcomms {
          * @param input
          * @return
          */
-        std::vector<std::vector<float>> get_input_data(const std::map<std::string, std::shared_ptr<IQBlock>>& input) const;
+        std::vector<std::vector<float>> get_input_data(const std::map<std::string, std::shared_ptr<IQBlock>>& input);
+
+        /**
+         * normalise the input data.
+        *  f = f / (np.max(np.abs(f), axis=1, keepdims=True) + 1e-9)
+        * z = z / (np.max(np.abs(z), axis=1, keepdims=True) + 1e-9)
+         * @param input
+         * @return
+         */
+        std::vector<std::complex<float>> normalise_input_data(std::vector<std::complex<float>>& input);
 
         /**
          * flatten nested vectors into a single flat vector for use with ONNX Runtime.

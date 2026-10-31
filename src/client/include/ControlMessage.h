@@ -27,9 +27,16 @@ namespace sdrcomms {
     };
 
     struct ControlMessage {
-        MessageType type;
-        MessageResult result;
-        double freq;
+        MessageType type = MessageType::MSG_NONE;
+        MessageResult result = MessageResult::MSG_NONE;
+        double freq = 0;
+        std::string classLabel =  "";
+        float confidence = 0;
+        int channel = 0;
+        /**
+         * time since epoch in milliseconds.
+         */
+        long long timestampMs = 0;
 
         static bool parseMQTTMessage(ControlMessage &msg, const struct mosquitto_message* message) {
             if (message->payload == nullptr) {
@@ -41,6 +48,10 @@ namespace sdrcomms {
                 msg.type = static_cast<MessageType>(j["type"].get<int>());
                 msg.result = static_cast<MessageResult>(j["result"].get<int>());
                 msg.freq = j["freq"].get<double>();
+                msg.classLabel = j["classLabel"].get<std::string>();
+                msg.confidence = j["confidence"].get<float>();
+                msg.channel = j["channel"].get<int>();
+                msg.timestampMs = j["timestampMs"].get<long long>();
                 return true;
             }  catch (std::exception ex) {
                 return false;
@@ -52,6 +63,10 @@ namespace sdrcomms {
             j["type"] = static_cast<int>(type);
             j["result"] = static_cast<int>(result);
             j["freq"] = freq;
+            j["classLabel"] = classLabel;
+            j["confidence"] = confidence;
+            j["channel"] = channel;
+            j["timestampMs"] = timestampMs;
             std::vector<uint8_t> buffer = json::to_cbor(j);
             return buffer;
         }
@@ -61,6 +76,10 @@ namespace sdrcomms {
             j["type"] = static_cast<int>(type);
             j["result"] = static_cast<int>(result);
             j["freq"] = freq;
+            j["classLabel"] = classLabel;
+            j["confidence"] = confidence;
+            j["channel"] = channel;
+            j["timestampMs"] = timestampMs;
             return j.dump();
         }
 

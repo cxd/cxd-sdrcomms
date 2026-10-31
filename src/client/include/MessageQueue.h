@@ -14,6 +14,8 @@ namespace sdrcomms {
     public:
         MessageQueue(size_t qsize) {
             capacity = qsize;
+            write_index.store(0, std::memory_order_relaxed);
+            read_index.store(0, std::memory_order_relaxed);
             blocks.resize(qsize);
             for (size_t i = 0; i < blocks.size(); i++) {
                 blocks[i] = T();

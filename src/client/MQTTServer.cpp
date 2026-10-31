@@ -54,11 +54,8 @@ namespace sdrcomms {
         mosquitto_publish_callback_set(this->mServer, publish_callback);
         mosquitto_message_callback_set(this->mServer, message_callback);
 
-        workerThread = std::thread([this]() {
-            this->incoming_message_thread();
-        });
-
         isInit.store(true, std::memory_order_relaxed);
+
         return true;
     }
 
@@ -89,6 +86,10 @@ namespace sdrcomms {
             return false;
         }
         running.store(true, std::memory_order_relaxed);
+
+        workerThread = std::thread([this]() {
+            this->incoming_message_thread();
+        });
         return true;
     }
 
@@ -152,9 +153,8 @@ namespace sdrcomms {
         messageQueue->push(msg);
     }
 
-    void MQTTServer::send_control_command(const std::string& message_topic, const ControlMessage& msg) {
-
-        const std::vector<uint8_t>& msg_cbor = msg.toCBOR();
+    void MQTTServer::send_control_command(const std::string &message_topic, const ControlMessage &msg) {
+        const std::vector<uint8_t> &msg_cbor = msg.toCBOR();
         // Compress down to highly optimized binary CBOR vector
         std::string target_topic = "sdrcomms/" + message_topic + "/control";
 
@@ -171,12 +171,13 @@ namespace sdrcomms {
         while (running.load(std::memory_order_relaxed)) {
             ControlMessage controlMessage{};
             if (sendToClientQueue->pop(controlMessage)) {
-                // we want to publish the message to a topic.
-                std::string topic = controlMessage.message_type_to_string();
-                send_control_command(topic, controlMessage);
+                if (controlMessage.type != MessageType::MSG_NONE) {
+                    // we want to publish the message to a topic.
+                    std::string topic = controlMessage.message_type_to_string();
+                    send_control_command(topic, controlMessage);
+                }
             }
             std::this_thread::sleep_for(std::chrono::microseconds(200));
         }
-
     }
 } // sdrcomms
