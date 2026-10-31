@@ -35,7 +35,7 @@ namespace sdrcomms {
         // the required number of samples before downsampling
         size_t required_input_samples;
         std::shared_ptr<IQBlock> accumulator;
-        std::shared_ptr<SampleProcessor> inner;
+
 
         /**
          * downsampl using liquid-dsp

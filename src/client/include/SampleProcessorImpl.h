@@ -16,8 +16,6 @@ namespace sdrcomms {
 
         void process(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) override;
 
-    private:
-        std::shared_ptr<SampleProcessor> inner;
     };
 } // sdrcomms
 

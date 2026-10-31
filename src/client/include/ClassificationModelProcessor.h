@@ -4,6 +4,9 @@
 
 #ifndef SDRCOMMS_CLASSIFICATIONMODELPROCESSOR_H
 #define SDRCOMMS_CLASSIFICATIONMODELPROCESSOR_H
+#include <thread>
+
+#include "ClassMap.h"
 #include "ControlMessage.h"
 #include "MessageQueue.h"
 #include "ModelFileLoader.h"
@@ -14,7 +17,11 @@
 namespace sdrcomms {
     class ClassificationModelProcessor : public SampleProcessor {
     public:
-        ClassificationModelProcessor(std::string attach_key,  std::string basePath, const ModelFileSpec &modelSpec, const std::vector<ProcessorOps> &processorOps,
+        ClassificationModelProcessor(std::string attach_key,
+            std::string basePath,
+            const ModelFileSpec &modelSpec,
+            const ClassMap &classMap,
+            const std::vector<ProcessorOps> &processorOps,
             std::shared_ptr<MessageQueue<sdrcomms::ControlMessage>> eventQueue);
 
         /**
@@ -22,6 +29,11 @@ namespace sdrcomms {
          * @return
          */
         bool init();
+
+        /**
+         * stop classification process
+         */
+        void teardown() override;
 
         /**
          * process the incoming block and update the inner processor.
@@ -34,15 +46,28 @@ namespace sdrcomms {
         std::string basePath;
         std::string modelPath;
         ModelFileSpec modelSpec{};
+        ClassMap classMap{};
         std::vector<ProcessorOps> processorOps;
         std::unique_ptr<ModelFileLoader> modelFileLoader;
         std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> eventQueue;
+        /**
+         * incoming queue of blocks to classify perform classification asynchronously
+         */
+        std::shared_ptr<MessageQueue<IQBlock>> classifyQueue;
+        std::thread classifyThread;
+        // internal flag indicating if streaming is active.
+        std::atomic<bool> isRunning;
         /**
          * initialise the model.
          * @return
          */
         bool load_model();
 
+
+        /**
+         * classification worker thread
+         */
+        void classify_worker();
     };
 } // sdrcomms
 

@@ -15,8 +15,23 @@ namespace sdrcomms {
          */
         virtual void process(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) = 0;
 
+        /**
+         * each part of the processor chain may be able to teardown
+         */
+        virtual void teardown() {
+            // override this method to perform any necessary cleanup
+            // but call the base method first
+            if (inner != nullptr) {
+                inner->teardown();
+            }
+        }
+
     protected:
         std::string attach_key;
+        /**
+         * pointer to inner sample processor
+         */
+        std::shared_ptr<SampleProcessor> inner;
 
         /**
          * forward attachments along the chain to the inner block

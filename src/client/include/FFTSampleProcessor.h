@@ -19,7 +19,6 @@ namespace sdrcomms {
         size_t fftSize;
         std::atomic<bool> isInit;
         std::shared_ptr<FFTTransform> fft;
-        std::shared_ptr<SampleProcessor> inner;
     };
 } // sdrcomms
 

@@ -15,6 +15,7 @@ using json = nlohmann::json;
 namespace sdrcomms {
     ModelFileSpec::ModelFileSpec(std::string name,
                                  std::string version,
+                                 int class_map_version,
                                  std::string onnx_file,
                                  bool logits,
                                  int sample_rate_hz,
@@ -22,6 +23,7 @@ namespace sdrcomms {
                                  std::vector<std::string> input_transforms) {
         this->name = name;
         this->version = version;
+        this->class_map_version = class_map_version;
         this->onnx_file = onnx_file;
         this->logits = logits;
         this->sample_rate_hz = sample_rate_hz;
@@ -48,12 +50,13 @@ namespace sdrcomms {
         json jobj = json::parse(data);
         std::string name = jobj["name"].get<std::string>();
         std::string version = jobj["version"].get<std::string>();
+        int class_map_version = jobj["class_map_version"].get<int>();
         std::string onnx_file = jobj["onnx_file"].get<std::string>();
         int sample_rate_hz = jobj["sample_rate_hz"].get<int>();
         bool logits = jobj["logits"].get<bool>();
         int input_length = jobj["input_length"].get<int>();
         auto transforms = jobj["input_transforms"].get<std::vector<std::string> >();
-        return ModelFileSpec{name, version, onnx_file, logits, sample_rate_hz, input_length, transforms};
+        return ModelFileSpec{name, version, class_map_version, onnx_file, logits, sample_rate_hz, input_length, transforms};
     }
 
 
@@ -71,7 +74,7 @@ namespace sdrcomms {
         buffer << in.rdbuf();
         std::string json_data = buffer.str();
         in.close();
-        return from_json(json_data);
+        return ModelFileSpec::from_json(json_data);
     }
 
     /**

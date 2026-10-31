@@ -11,11 +11,13 @@ namespace sdrcomms {
     ClassificationModelProcessor::ClassificationModelProcessor(std::string attach_key,
         std::string basePath,
         const ModelFileSpec &modelSpec,
+        const ClassMap &classMap,
         const std::vector<ProcessorOps> &processorOps,
         std::shared_ptr<MessageQueue<sdrcomms::ControlMessage>> eventQueue) {
         this->attach_key = attach_key;
         this->basePath = basePath;
         this->modelSpec = modelSpec;
+        this->classMap = classMap;
         this->processorOps = processorOps;
         // the event queue can be used to post classification events on a separate thread.
         this->eventQueue = eventQueue;
@@ -27,7 +29,21 @@ namespace sdrcomms {
         */
     bool ClassificationModelProcessor::init() {
         isInit = load_model();
+        if (!isInit) {
+            return isInit;
+        }
+        isRunning.store(true, std::memory_order_relaxed);
         return isInit;
+    }
+
+    void ClassificationModelProcessor::teardown() {
+        if (isRunning.load(std::memory_order_relaxed)) {
+            SampleProcessor::teardown();
+            isRunning.store(false, std::memory_order_relaxed);
+            if (classifyThread.joinable()) {
+                classifyThread.join();
+            }
+        }
     }
 
     /**
@@ -56,17 +72,31 @@ namespace sdrcomms {
         if (!isInit) {
             return;
         }
-        // TODO: we should add a signal detection mechanism to determine if the classifier should be called  execute classification.
-        // TODO: we might need to also run the prediction process in a separate thread this is because the forward pass on ONNX seems to be somewhat slow.
-        // this will mean we need a queue message type for the inputs to the prediction method.
-        //
-        std::vector<float> probabilities = modelFileLoader->predict(block, attachments);
-        // TODO: we need to pick the maximum index and read the class label for that index from the class labels file.
-        // that could be done as part of prediction method inside modelFileLoader.
+        // TODO: we should add a signal detection mechanism to determine if the classifier should be called execute classification.
+        // signal detection can be run as a processor block before this process block.
+        block.attachments = attachments;
+        this->classifyQueue->push(block);
+    }
 
-        // TODO: after prediction we need to send a control message indicating classification outputs.
-        // we need a channel to communicate this on, ie: a concurrent queue for control messages.
 
-        // forwardAttachments(block, attach_key, innerBlock);
+    /**
+         * classification worker thread
+         */
+    void ClassificationModelProcessor::classify_worker() {
+        while (isRunning.load(std::memory_order_relaxed)) {
+            IQBlock block {};
+            if (classifyQueue->pop(block)) {
+                auto attachments = block.attachments;
+                if (attachments.size() > 0) {
+                    // perform inference
+                    std::vector<float> probabilities = modelFileLoader->predict(block, attachments);
+                    // TODO: get maximum propbabilities
+
+                    // TODO: post classification message into the event queue
+
+                }
+
+            }
+        }
     }
 }

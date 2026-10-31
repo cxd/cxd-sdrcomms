@@ -10,6 +10,8 @@
 #include "IQBlock.h"
 #include <chrono>
 
+#include "ClassificationModelProcessor.h"
+#include "ClassMap.h"
 #include "ControlMessage.h"
 #include "FFTSampleProcessor.h"
 #include "MessageQueue.h"
@@ -19,8 +21,13 @@
 
 class ApplicationProcessor : public sdrcomms::SampleProcessor {
 public:
-    ApplicationProcessor(std::string udpServerAddress, int udpPort, double source_sample_rate_hz, std::string modelFile, std::string basePath,
-         std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> eventQueue );
+    ApplicationProcessor(std::string udpServerAddress,
+                         int udpPort,
+                         double source_sample_rate_hz,
+                         std::string modelFile,
+                         std::string classMapFilename,
+                         std::string basePath,
+                         std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage> > eventQueue);
 
     /**
      * initialise the application processor.
@@ -29,10 +36,16 @@ public:
     bool init();
 
     /**
+     * tear down the processor chain
+     */
+    void teardown() override;
+
+    /**
      * implement the process method
      * @param block
      */
-    void process(sdrcomms::IQBlock &block, std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> &attachments) override;
+    void process(sdrcomms::IQBlock &block,
+                 std::map<std::string, std::shared_ptr<sdrcomms::IQBlock> > &attachments) override;
 
     /**
      * expose start server
@@ -43,23 +56,26 @@ public:
      * expose stop server
      */
     void stopServer();
+
 private:
     std::string udpServerAddress;
     int udpPort;
     static const long ONE_SECOND = 1000;
 
     std::string modelPath;
+    std::string classMapFilename;
     std::string basePath;
     std::string modelSpecFile;
     double source_sample_rate_hz = sdrcomms::DEFAULT_CENTER_FREQUENCY;
 
-    std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> eventQueue;
+    std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage> > eventQueue;
 
-    sdrcomms::ModelFileSpec modelSpec {};
-    std::vector<sdrcomms::ProcessorOps> processorOps {};
+    sdrcomms::ModelFileSpec modelSpec{};
+    sdrcomms::ClassMap classMap{};
+    std::vector<sdrcomms::ProcessorOps> processorOps{};
 
     std::unique_ptr<sdrcomms::SampleStreamerProcessor> sampleStreamerProcessor;
-
+    std::shared_ptr<sdrcomms::ClassificationModelProcessor> modelProcessor;
     std::shared_ptr<sdrcomms::SampleProcessor> processingChain;
 
     long blocks_per_second;
@@ -87,10 +103,6 @@ private:
      * build the processing chain.
      */
     std::shared_ptr<sdrcomms::SampleProcessor> build_processing_chain(std::shared_ptr<SampleProcessor> lastProcessor);
-
-
-
-
 };
 
 

@@ -70,6 +70,10 @@ int main(int argc, char **argv) {
     CLI::Option *modeSpecFileOpt = app.add_option("-f,--model-file", modelSpecFile,
         "The json file containing the model specification to use.");
 
+    std::string classMapFile = "";
+    CLI::Option *classMapFileOpt = app.add_option("-c,--class-map-file", classMapFile,
+        "The json file containing the class map to use.");
+
     CLI11_PARSE(app, argc, argv);
     // these params can be used to connect to local device directly
     // if specified.
@@ -91,6 +95,11 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    if (classMapFileOpt->count() == 0 || classMapFile == "") {
+        std::cout << "Class Map file not defined." << std::endl;
+        std::cout << app.help() << std::endl;
+        return 1;
+    }
 
     // these params are optionally used for remote connections.
     if (serverUriOpt->count() == 0) {
@@ -135,8 +144,14 @@ int main(int argc, char **argv) {
     // the message queue used to send to clients
     std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> sendToClientQueue = std::make_shared<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> (sdrcomms::DEFAULT_QUEUE_SIZE);
 
-    auto processor = std::make_shared<ApplicationProcessor>(udpServerUri, udp_stream_port, sdrcomms::DEFAULT_CENTER_FREQUENCY,
-        modelSpecFile, modelPath);
+    auto processor = std::make_shared<ApplicationProcessor>(udpServerUri,
+        udp_stream_port,
+        sdrcomms::DEFAULT_CENTER_FREQUENCY,
+        modelSpecFile,
+        classMapFile,
+        modelPath,
+        sendToClientQueue);
+
     // initialise the application processor.
     if (!processor->init()) {
         client->StopStreaming();
@@ -144,8 +159,6 @@ int main(int argc, char **argv) {
     }
     // start the processor server to allow remote connections.
     processor->startServer();
-
-
 
     bool flag = client->StreamData(processor);
     if (!flag) {

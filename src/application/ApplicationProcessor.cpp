@@ -13,12 +13,15 @@
 
 ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udpPort, double source_sample_rate_hz,
                                            std::string modelFile,
+                                           std::string classMapFilename,
                                            std::string basePath,
-                                           std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> eventQueue) {
+                                           std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage> >
+                                           eventQueue) {
     this->udpServerAddress = udpServerAddress;
     this->udpPort = udpPort;
     this->source_sample_rate_hz = source_sample_rate_hz;
     this->modelSpecFile = modelFile;
+    this->classMapFilename = classMapFilename;
     this->basePath = basePath;
     this->modelPath = "";
     this->eventQueue = eventQueue;
@@ -31,6 +34,7 @@ ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udp
 bool ApplicationProcessor::init() {
     // load the json model file and the model file.
     modelSpec = sdrcomms::ModelFileSpec::from_file(modelSpecFile);
+    classMap = sdrcomms::ClassMap::from_file(classMapFilename);
 
     // load the process operations.
     processorOps = get_operations();
@@ -40,8 +44,14 @@ bool ApplicationProcessor::init() {
     processingChain = build_processing_chain(last_processor);
     // udp stream processing chain
     this->sampleStreamerProcessor = std::make_unique<sdrcomms::SampleStreamerProcessor>(udpServerAddress, udpPort);
-
     return true;
+}
+
+/**
+* tear down the processor chain
+*/
+void ApplicationProcessor::teardown() {
+    this->processingChain->teardown();
 }
 
 /**
@@ -50,7 +60,7 @@ bool ApplicationProcessor::init() {
  */
 std::vector<sdrcomms::ProcessorOps> ApplicationProcessor::get_operations() {
     std::vector<sdrcomms::ProcessorOps> result{};
-    for (const auto& transform: modelSpec.input_transforms) {
+    for (const auto &transform: modelSpec.input_transforms) {
         sdrcomms::ProcessorOps op = sdrcomms::operation_from_string(transform);
         if (op == sdrcomms::ProcessorOps::NONE) {
             continue;
@@ -66,15 +76,16 @@ std::vector<sdrcomms::ProcessorOps> ApplicationProcessor::get_operations() {
      */
 std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::make_model_processor() {
     std::string op = sdrcomms::operation_to_string(sdrcomms::ProcessorOps::CLASSIFY);
-    std::shared_ptr<sdrcomms::ClassificationModelProcessor> processor = std::make_shared<sdrcomms::ClassificationModelProcessor>(op,
-        basePath,
-        modelSpec,
-        processorOps,
-        eventQueue);
-    if (!processor->init()) {
+    modelProcessor = std::make_shared<sdrcomms::ClassificationModelProcessor>(op,
+                                                                              basePath,
+                                                                              modelSpec,
+                                                                              classMap,
+                                                                              processorOps,
+                                                                              eventQueue);
+    if (!modelProcessor->init()) {
         return nullptr;
     }
-    return processor;
+    return modelProcessor;
 }
 
 
@@ -82,8 +93,8 @@ std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::make_model_proc
  * build the processing chain.
  * We will have to work backwards from the last item in the processing ops back to the first.
  */
-std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::build_processing_chain(std::shared_ptr<SampleProcessor> lastProcessor) {
-
+std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::build_processing_chain(
+    std::shared_ptr<SampleProcessor> lastProcessor) {
     for (auto op: processorOps | std::ranges::views::reverse) {
         if (op == sdrcomms::ProcessorOps::DOWNSAMPLE) {
             const std::shared_ptr<SampleProcessor> next = std::make_shared<sdrcomms::DownsampleProcessor>(
@@ -121,7 +132,8 @@ void ApplicationProcessor::stopServer() {
      * implement the process method
      * @param block
      */
-void ApplicationProcessor::process(sdrcomms::IQBlock &block, std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> &attachments) {
+void ApplicationProcessor::process(sdrcomms::IQBlock &block,
+                                   std::map<std::string, std::shared_ptr<sdrcomms::IQBlock> > &attachments) {
     auto now = std::chrono::system_clock::now();
     auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->last_packet).count();
     if (delta >= ONE_SECOND) {
@@ -136,7 +148,4 @@ void ApplicationProcessor::process(sdrcomms::IQBlock &block, std::map<std::strin
     this->processingChain->process(block, attachments);
     // streaming iq samples
     this->sampleStreamerProcessor->process(block, attachments);
-
-
-
 }

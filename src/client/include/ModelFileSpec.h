@@ -26,6 +26,7 @@ namespace sdrcomms {
 
         ModelFileSpec(std::string name,
             std::string version,
+            int class_map_version,
             std::string onnx_file,
             bool logits,
             int sample_rate_hz,
@@ -49,6 +50,8 @@ namespace sdrcomms {
 
         std::string name;
         std::string version;
+        // the version of the class map
+        int class_map_version;
         std::string onnx_file;
         bool logits;
         int sample_rate_hz;
