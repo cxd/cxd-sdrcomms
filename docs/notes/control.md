@@ -16,3 +16,13 @@ to communicate the mode with the server.
 
 By default at startup the
 server mode is automatic scanning.
+
+
+The spectrum is large area, so we may well want to experiment with different scanning
+strategies.
+
+In a larger application, multiple instances of receivers and drivers would be applied
+to potentially scan different segments of the spectrum. 
+This would make sense to subdivide the ranges amongst multiple instances.
+
+Data aggregation can be performed by mqtt clients in that case.
