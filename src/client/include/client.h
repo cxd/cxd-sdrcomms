@@ -75,6 +75,25 @@ namespace sdrcomms {
          */
         void SetSampleRateMSps(double sampleRate);
 
+        /**
+         * set the default receiver gain
+         * @param gain
+         * @return
+         */
+        void SetRxGain(double gain);
+
+        /**
+         * get the rx gain frm the device
+         * @return
+         */
+        double GetRxGain();
+
+        /**
+         * set the transmit gain to 0 to reduce possible interference
+         * with the receiver when using the device for listening only
+         */
+        void DisableTransmitter();
+
         bool StopStreaming();
 
     private:
@@ -118,12 +137,16 @@ namespace sdrcomms {
          **/
         size_t required_samples = REQUIRED_SAMPLES;
 
+        double rxGain = RX_DEFAULT_GAIN_DB;
+
         /**
          * configuration from the device.
          */
         double minSampleRate, maxSampleRate;
         double minBandwidth, maxBandwidth;
         double minFrequency, maxFrequency;
+        double minGain, maxGain;
+
         int numChannels;
 
         /**

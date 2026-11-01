@@ -182,7 +182,9 @@ add_library(client_static STATIC include/client.h
         ClassificationModelProcessor.cpp
         include/ClassificationModelProcessor.h
         ClassMap.cpp
-        include/ClassMap.h)
+        include/ClassMap.h
+        RootMeanSquareProcessor.cpp
+        include/RootMeanSquareProcessor.h)
 
 # 2. If the option is turned ON, inject a preprocessor macro into the C++ compiler
 if (ENABLE_SDR_DEBUG)

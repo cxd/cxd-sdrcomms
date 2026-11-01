@@ -10,9 +10,11 @@
 #include "ClassificationModelProcessor.h"
 #include "constants.h"
 #include "DownsampleProcessor.h"
+#include "RootMeanSquareProcessor.h"
 
 ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udpPort,
                                            double source_sample_rate_hz,
+                                           float rms_db_threshold,
                                            size_t required_samples,
                                            std::string modelFile,
                                            std::string classMapFilename,
@@ -22,6 +24,7 @@ ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udp
     this->udpServerAddress = udpServerAddress;
     this->udpPort = udpPort;
     this->source_sample_rate_hz = source_sample_rate_hz;
+    this->rms_db_threshold = rms_db_threshold;
     this->required_samples = required_samples;
     this->modelSpecFile = modelFile;
     this->classMapFilename = classMapFilename;
@@ -80,10 +83,16 @@ std::vector<sdrcomms::ProcessorOps> ApplicationProcessor::get_operations() {
      */
 std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::make_model_processor() {
     std::string op = sdrcomms::operation_to_string(sdrcomms::ProcessorOps::CLASSIFY);
+    //  attach an RMS block into the processing chain before the downsampler.
+    std::string downsampleOp = sdrcomms::operation_to_string(sdrcomms::ProcessorOps::DOWNSAMPLE);
+    auto rms_processor = std::make_shared<sdrcomms::RootMeanSquareProcessor>(rms_key, downsampleOp, nullptr);
     modelProcessor = std::make_shared<sdrcomms::ClassificationModelProcessor>(op,
                                                                               basePath,
                                                                               modelSpec,
                                                                               classMap,
+                                                                              rms_key,
+                                                                              rms_db_threshold,
+                                                                              rms_processor,
                                                                               processorOps,
                                                                               eventQueue);
     if (!modelProcessor->init()) {

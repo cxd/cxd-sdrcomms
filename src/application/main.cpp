@@ -140,7 +140,8 @@ int main(int argc, char **argv) {
     }
     client->SetSampleRateMSps(sdrcomms::DEFAULT_SAMPLE_RATE_HZ);
     client->SetCenterFrequency(sdrcomms::DEFAULT_CENTER_FREQUENCY);
-
+    client->SetRxGain(sdrcomms::RX_DEFAULT_GAIN_DB);
+    client->DisableTransmitter();
 
     // the message queue used to send to clients
     std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> sendToClientQueue = std::make_shared<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> (sdrcomms::DEFAULT_QUEUE_SIZE);
@@ -148,6 +149,7 @@ int main(int argc, char **argv) {
     auto processor = std::make_shared<ApplicationProcessor>(udpServerUri,
         udp_stream_port,
         sdrcomms::DEFAULT_SAMPLE_RATE_HZ,
+        sdrcomms::DEFAULT_RMS_DB_THRESHOLD,
         sdrcomms::REQUIRED_SAMPLES,
         modelSpecFile,
         classMapFile,

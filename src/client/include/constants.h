@@ -17,6 +17,10 @@ namespace sdrcomms {
      */
     const double DEFAULT_SAMPLE_RATE_HZ = 3.0e6;
 
+    /***
+     * default rms db threshold for detection of signal.
+     */
+    const float DEFAULT_RMS_DB_THRESHOLD = -7;
     /**
      * default queue depth.
      * this controls the size of the circular buffer used to store samples.
@@ -30,13 +34,20 @@ namespace sdrcomms {
      * kHz = 1000 Hz = 1e3
      * MHz = 1000000 Hz = 1e6
      * GHz = 1000000000 Hz = 1e9
+     *
+     * Example of wifi band for testing:
+     *
+     *   • Channel 1: 2412000000 Hz (2.412 GHz)
+     *   • Channel 6: 2437000000 Hz (2.437 GHz)
+     *   • Channel 11: 2462000000 Hz (2.462 GHz)
+     *
      */
-    const double DEFAULT_CENTER_FREQUENCY = 2.4e9;
+    const double DEFAULT_CENTER_FREQUENCY = 2.412e9;
 
     /**
-     * a step of 10 kHz
+     * a step of 10 MHz
      */
-    const double FREQUENCY_STEP = 10e3;
+    const double FREQUENCY_STEP = 10e6;
 
     /**
      * step frequency every n millis.
@@ -47,6 +58,11 @@ namespace sdrcomms {
      * after changing the frequency or other settings drop n blocks.
      */
     const int DROP_BLOCKS = 3;
+
+    /**
+     * default rx gain in db
+     */
+    const double RX_DEFAULT_GAIN_DB = 64.0;
 
     /**
      * default minimum transmission unit

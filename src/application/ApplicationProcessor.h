@@ -24,6 +24,7 @@ public:
     ApplicationProcessor(std::string udpServerAddress,
                          int udpPort,
                          double source_sample_rate_hz,
+                         float rms_db_threshold,
                          size_t required_samples,
                          std::string modelFile,
                          std::string classMapFilename,
@@ -68,6 +69,8 @@ private:
     std::string basePath;
     std::string modelSpecFile;
     double source_sample_rate_hz = sdrcomms::DEFAULT_SAMPLE_RATE_HZ;
+    std::string rms_key = "rms";
+    float rms_db_threshold = sdrcomms::DEFAULT_RMS_DB_THRESHOLD;
     size_t required_samples = sdrcomms::REQUIRED_SAMPLES;
 
     std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage> > eventQueue;

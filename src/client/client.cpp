@@ -89,12 +89,14 @@ namespace sdrcomms {
                 std::cout << "Channel " << i << std::endl;
                 std::vector<std::string> streamFormats = device->getStreamFormats(SOAPY_SDR_RX, i);
                 double gain = device->getGain(SOAPY_SDR_RX, i);
+                SoapySDR::Range gainRange = device->getGainRange(SOAPY_SDR_RX, i);
                 double freq = device->getFrequency(SOAPY_SDR_RX, i);
                 SoapySDR::RangeList freqRange = device->getFrequencyRange(SOAPY_SDR_RX, i);
                 double sampleRate = device->getSampleRate(SOAPY_SDR_RX, i);
                 SoapySDR::RangeList sampleRateRange = device->getSampleRateRange(SOAPY_SDR_RX, i);
                 double bandWidth = device->getBandwidth(SOAPY_SDR_RX, i);
                 SoapySDR::RangeList bandwidthRange = device->getBandwidthRange(SOAPY_SDR_RX, i);
+
 
                 std::cout << "Supported RX Channel Stream Formats" << std::endl;
                 for (auto format: streamFormats) {
@@ -128,6 +130,10 @@ namespace sdrcomms {
                     maxBandwidth = item->maximum();
                     std::cout << item->minimum() << " to " << item->maximum() << std::endl;
                 }
+                std::cout << "Support Gain" << std::endl;
+                minGain = gainRange.minimum();
+                maxGain = gainRange.maximum();
+                std::cout << gainRange.minimum() << " to " << gainRange.maximum() << std::endl;
             }
             std::vector<std::string> sensors = device->listSensors();
             std::cout << "Supported Sensors" << std::endl;
@@ -217,6 +223,48 @@ namespace sdrcomms {
         this->sampleRate.store(sampleRate, std::memory_order_relaxed);
         this->bandwidth.store(sampleRate, std::memory_order_relaxed);
     }
+
+    /**
+         * set the default receiver gain
+         * @param gain
+         * @return
+         */
+    void Client::SetRxGain(double gain) {
+        if (gain < minGain || sampleRate > maxGain) {
+            return;
+        }
+        if (!isConnected) {
+            return;
+        }
+        rxGain = gain;
+        for (int i=0;i<numChannels;i++) {
+            device->setGain(SOAPY_SDR_RX, 0, gain);
+        }
+
+    }
+
+    /**
+     * get the rx gain frm the device
+     * @return
+     */
+    double Client::GetRxGain() {
+        return rxGain;
+    }
+
+
+    /**
+         * set the transmit gain to 0 to reduce possible interference
+         * with the receiver when using the device for listening only
+         */
+    void Client::DisableTransmitter() {
+        if (!isConnected) {
+            return;
+        }
+        for (int i = 0; i < numChannels; i++) {
+            device->setGain(SOAPY_SDR_TX, i, 0);
+        }
+    }
+
 
     bool Client::StopStreaming() {
         if (device == nullptr || !isConnected) {
@@ -342,6 +390,7 @@ namespace sdrcomms {
                 void *buffer[] = {samples.data()};
                 // we now need to read
                 int numsamples = device->readStream(stream, buffer, mtu, flags, timeNs, timeoutUs);
+
                 if (numsamples < 0) {
                     std::cerr << "[" << channel << "] Failed to read stream data." << std::endl;
                     continue;
@@ -373,6 +422,9 @@ namespace sdrcomms {
                 auto now = std::chrono::system_clock::now();
                 auto duration = now.time_since_epoch();
                 auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+
+
+
                 long long timestampMs = millis.count();
                 while (!queue->push(timestampMs, channel, dest, dest.size(), freq) && attempt < 5) {
                     std::this_thread::yield();

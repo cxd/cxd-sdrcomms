@@ -12,6 +12,7 @@
 #include "ModelFileLoader.h"
 #include "ModelFileSpec.h"
 #include "ProcessorOps.h"
+#include "RootMeanSquareProcessor.h"
 #include "SampleProcessor.h"
 
 namespace sdrcomms {
@@ -21,6 +22,9 @@ namespace sdrcomms {
             std::string basePath,
             const ModelFileSpec &modelSpec,
             const ClassMap &classMap,
+            std::string rms_db_key,
+            float rms_db_threshold,
+            std::shared_ptr<RootMeanSquareProcessor> rmsProcessor,
             const std::vector<ProcessorOps> &processorOps,
             std::shared_ptr<MessageQueue<sdrcomms::ControlMessage>> eventQueue);
 
@@ -45,6 +49,14 @@ namespace sdrcomms {
         bool isInit = false;
         std::string basePath;
         std::string modelPath;
+
+        // the key to lookup the rms db threshold
+        std::string rms_db_key = "rms_db";
+        // set the rms db threshold for signal detection
+        // we ignore any signals with a lower threshold.
+        float rms_db_threshold = -30;
+        std::shared_ptr<RootMeanSquareProcessor> rmsProcessor;
+
         ModelFileSpec modelSpec{};
         ClassMap classMap{};
         std::vector<ProcessorOps> processorOps;
@@ -57,6 +69,8 @@ namespace sdrcomms {
         std::thread classifyThread;
         // internal flag indicating if streaming is active.
         std::atomic<bool> isRunning;
+
+
         /**
          * initialise the model.
          * @return
@@ -68,6 +82,11 @@ namespace sdrcomms {
          * classification worker thread
          */
         void classify_worker();
+
+        /**
+         * lookup rms db
+         */
+        float get_rms_db_threshold(std::map<std::string, std::shared_ptr<IQBlock>> &attachments);
     };
 } // sdrcomms
 
