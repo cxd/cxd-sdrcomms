@@ -13,4 +13,9 @@ EXEC_PATH=cmake-build-debug/src/application/application
              --remote-driver=plutosdr \
              --device-uri=ip:pluto.local \
              --bind-address= \
-             --server-uri=
+             --server-uri= \
+             --udp-server-address=192.168.0.89 \
+             --model-path=/Users/cd/Projects/cpp/sdrcomms/src/resources \
+             --model-file=/Users/cd/Projects/cpp/sdrcomms/src/resources/mod_dualbranch_tcn.json \
+             --class-map-file=/Users/cd/Projects/cpp/sdrcomms/src/resources/class_map_v1.json
+
