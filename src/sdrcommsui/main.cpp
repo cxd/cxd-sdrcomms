@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
     sigaction(SIGINT, &sig_int_handler, nullptr);
     sigaction(SIGTERM, &sig_int_handler, nullptr);
 
-    std::cout << "Sleaping 2 seconds before starting" << std::endl;
+    std::cout << "Sleeping 2 seconds before starting" << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     display.run();
 

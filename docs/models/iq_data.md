@@ -128,6 +128,38 @@ $$
 But that is only if the transmission sample rate is 3e6 Hz as well.
 
 
+## Thresholds
+
+The gain on the receiver for PlutoSDR is between 0 and 74 dB
+we configure a default gain of 64 dB
+
+However the basic threshold detector used before classification is a simple RMS power detector.
+
+$$
+RMS = \sqrt{\sum{\frac{1}{N}|x|^2}}
+$$
+
+we set this threshold based on observation of the Average RMS for the sample length of 1024000 samples.
+The average RMS dB of the received samples is between -11 dB to 12 dB
+The threshold is set at -6 dB before enabling classification.
+
+However this is a tunable parameter, and more experimentation needs to be undertaken to determine 
+the suitable power.
+
+Some of the configuration may need to be persisted in the future so that
+experimentation can select suitable parameters and store them externally.
 
 
+Some additional interesting references
 
+https://wiki.analog.com/university/tools/pluto/hacking/listening_to_yourself
+
+https://pysdr.org
+
+https://www.digikey.com/en/articles/solving-the-rf-power-detection-challenge
+
+https://www.dsprelated.com/thread/2178/measure-signal-power
+
+https://www.spectrum-tracker.com/australia
+
+https://www.acma.gov.au/sites/default/files/2019-10/Australian%20radiofrequency%20spectrum%20allocations%20chart.pdf
