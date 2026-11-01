@@ -36,7 +36,8 @@ namespace sdrcomms {
                std::string remoteDriverName,
                std::string remoteDeviceUri,
                std::string remoteBindAddr,
-               size_t queueDepth);
+               size_t queueDepth,
+               size_t required_samples);
 
         bool Connect();
 
@@ -112,6 +113,10 @@ namespace sdrcomms {
          */
         double defaultSampleRateMsps = DEFAULT_SAMPLE_RATE_HZ;
         double defaultBandwidthHz = DEFAULT_SAMPLE_RATE_HZ;
+        /**
+         * default number of samples to read
+         **/
+        size_t required_samples = REQUIRED_SAMPLES;
 
         /**
          * configuration from the device.

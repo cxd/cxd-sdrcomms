@@ -27,18 +27,26 @@ namespace sdrcomms {
     /**
      *
      * default center frequency. 2.4Ghz
+     * kHz = 1000 Hz = 1e3
+     * MHz = 1000000 Hz = 1e6
+     * GHz = 1000000000 Hz = 1e9
      */
-    const double DEFAULT_CENTER_FREQUENCY = 2.4e7;
+    const double DEFAULT_CENTER_FREQUENCY = 2.4e9;
 
     /**
-     * a step of 1 kHz
+     * a step of 10 kHz
      */
-    const double FREQUENCY_STEP = 10000;
+    const double FREQUENCY_STEP = 10e3;
 
     /**
      * step frequency every n millis.
      */
-    const long long FREQUENCY_SCAN_CHANGE_MILLIS = 30 * 1000;
+    const long long FREQUENCY_SCAN_CHANGE_MILLIS = 60 * 1000;
+
+    /**
+     * after changing the frequency or other settings drop n blocks.
+     */
+    const int DROP_BLOCKS = 3;
 
     /**
      * default minimum transmission unit

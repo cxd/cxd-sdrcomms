@@ -22,10 +22,11 @@
 #include "include/NetIQBlock.h"
 
 namespace sdrcomms {
-    SampleStreamerProcessor::SampleStreamerProcessor(std::string udpServerAddress, int udpPort) {
+    SampleStreamerProcessor::SampleStreamerProcessor(std::string udpServerAddress, int udpPort, size_t required_samples) {
         this->udpServerAddress = udpServerAddress;
         this->udpPort = udpPort;
-        this->receiveQueue = std::make_shared<ReceiveQueue>(DEFAULT_QUEUE_SIZE, REQUIRED_SAMPLES);
+        this->required_samples = required_samples;
+        this->receiveQueue = std::make_shared<ReceiveQueue>(DEFAULT_QUEUE_SIZE, required_samples);
     }
 
 
@@ -172,7 +173,7 @@ namespace sdrcomms {
                 continue;
             }
             auto copy_active = std::atomic_load(&active_clients);
-            IQBlock block{REQUIRED_SAMPLES};
+            IQBlock block{required_samples};
             if (receiveQueue->pop(block)) {
                 // stream data to clients.
                 // serialize the block.

@@ -127,7 +127,8 @@ int main(int argc, char **argv) {
         remoteDriver,
         deviceUri,
         bindAddress,
-        sdrcomms::DEFAULT_QUEUE_SIZE
+        sdrcomms::DEFAULT_QUEUE_SIZE,
+        sdrcomms::REQUIRED_SAMPLES
     );
     bool isConnectd = client->Connect();
     std::cout << "Client connected: " << isConnectd << std::endl;
@@ -146,7 +147,8 @@ int main(int argc, char **argv) {
 
     auto processor = std::make_shared<ApplicationProcessor>(udpServerUri,
         udp_stream_port,
-        sdrcomms::DEFAULT_CENTER_FREQUENCY,
+        sdrcomms::DEFAULT_SAMPLE_RATE_HZ,
+        sdrcomms::REQUIRED_SAMPLES,
         modelSpecFile,
         classMapFile,
         modelPath,

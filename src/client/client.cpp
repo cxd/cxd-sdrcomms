@@ -13,13 +13,15 @@ namespace sdrcomms {
                    std::string remoteDriverName,
                    std::string remoteDeviceUri,
                    std::string remoteBindAddr,
-                   size_t queueDepth) {
+                   size_t queueDepth,
+                   size_t required_samples) {
         this->serverUrl = serverUrl;
         this->driverName = driverName;
         this->queueDepth = queueDepth;
         this->remoteDriverName = remoteDriverName;
         this->remoteDeviceUri = remoteDeviceUri;
         this->remoteBindAddr = remoteBindAddr;
+        this->required_samples = required_samples;
     }
 
     bool Client::Connect() {
@@ -187,7 +189,7 @@ namespace sdrcomms {
         for (int i = 0; i < numChannels; i++) {
             device->setFrequency(SOAPY_SDR_RX, i, frequency);
         }
-        dropBlocks.store(10, std::memory_order_relaxed);
+        dropBlocks.store(DROP_BLOCKS, std::memory_order_relaxed);
     }
 
     /**
@@ -211,7 +213,7 @@ namespace sdrcomms {
             device->setSampleRate(SOAPY_SDR_RX, i, sampleRate);
             device->setBandwidth(SOAPY_SDR_RX, i, sampleRate);
         }
-        dropBlocks.store(2, std::memory_order_relaxed);
+        dropBlocks.store(DROP_BLOCKS, std::memory_order_relaxed);
         this->sampleRate.store(sampleRate, std::memory_order_relaxed);
         this->bandwidth.store(sampleRate, std::memory_order_relaxed);
     }
@@ -291,7 +293,7 @@ namespace sdrcomms {
         receiveQueues.resize(numChannels);
         for (int i = 0; i < numChannels; i++) {
             // samples per second
-            auto queue = std::make_shared<ReceiveQueue>(queueDepth, REQUIRED_SAMPLES);
+            auto queue = std::make_shared<ReceiveQueue>(queueDepth, required_samples);
             receiveQueues[i] = queue;
         }
 
@@ -324,19 +326,19 @@ namespace sdrcomms {
         long long timeNs = 0;
         const long timeoutUs = 100000;
         // a vector to hold the previous samples that were not read.
-        std::vector<std::complex<float>> prev {};
+        std::vector<std::complex<float> > prev{};
         while (isStreaming.load(std::memory_order_relaxed)) {
             size_t samples_read = 0;
             size_t src_pos = 0;
-            std::vector<std::complex<float>> dest {};
+            std::vector<std::complex<float> > dest{};
             // if we were left with any previous data we need to copy it into the destination.
             if (prev.size() > 0) {
-                samples_read = accumulate_samples(REQUIRED_SAMPLES, samples_read, 0, prev, dest);
+                samples_read = accumulate_samples(required_samples, samples_read, 0, prev, dest);
                 prev.clear();
             }
-            while (samples_read < REQUIRED_SAMPLES && isStreaming.load(std::memory_order_relaxed)) {
+            while (samples_read < required_samples && isStreaming.load(std::memory_order_relaxed)) {
                 // vector to read into
-                std::vector<std::complex<float>> samples(mtu);
+                std::vector<std::complex<float> > samples(mtu);
                 void *buffer[] = {samples.data()};
                 // we now need to read
                 int numsamples = device->readStream(stream, buffer, mtu, flags, timeNs, timeoutUs);
@@ -345,27 +347,24 @@ namespace sdrcomms {
                     continue;
                 }
 
-                if (dest.size() + samples.size() > REQUIRED_SAMPLES) {
+                if (dest.size() + samples.size() > required_samples) {
                     // we need to only take enough samples
-                    std::vector<std::complex<float>> tmp;
+                    std::vector<std::complex<float> > tmp;
                     prev.clear();
-                    tmp.reserve(REQUIRED_SAMPLES - dest.size());
-                    std::copy(samples.begin(), samples.begin() + (REQUIRED_SAMPLES - dest.size()), std::back_inserter(tmp));
-                    samples_read = accumulate_samples(REQUIRED_SAMPLES, samples_read, src_pos, tmp, dest);
+                    tmp.reserve(required_samples - dest.size());
+                    std::copy(samples.begin(), samples.begin() + (required_samples - dest.size()),
+                              std::back_inserter(tmp));
+                    samples_read = accumulate_samples(required_samples, samples_read, src_pos, tmp, dest);
                     // slice the remaining samples into the previous vector.
                     size_t n = samples.size() - tmp.size();
                     std::copy(samples.begin() + n, samples.end(), std::back_inserter(prev));
-
                 } else {
-                    samples_read = accumulate_samples(REQUIRED_SAMPLES, samples_read, src_pos, samples, dest);
-
+                    samples_read = accumulate_samples(required_samples, samples_read, src_pos, samples, dest);
                 }
-
             }
 
             double freq = centerFrequency.load(std::memory_order_relaxed);
-            if (samples_read >= REQUIRED_SAMPLES) {
-
+            if (samples_read >= required_samples) {
 #ifdef DEBUG_VERBOSE
                 std::cout << "[" << channel << "] Read: " << samples_read << " " << mtu << std::endl;
 #endif
@@ -400,7 +399,9 @@ namespace sdrcomms {
      * @return
      * the number of samples copied from the source into the destination.
      */
-    size_t Client::accumulate_samples(size_t numSamples, size_t dest_pos, size_t src_pos, std::vector<std::complex<float>>& source, std::vector<std::complex<float>>& destination) {
+    size_t Client::accumulate_samples(size_t numSamples, size_t dest_pos, size_t src_pos,
+                                      std::vector<std::complex<float> > &source,
+                                      std::vector<std::complex<float> > &destination) {
         if (dest_pos >= numSamples) {
             return 0;
         }
@@ -417,8 +418,8 @@ namespace sdrcomms {
         }
 
         std::copy(source.begin() + src_pos,
-            source.begin() + src_pos + safe_n,
-            destination.begin() + dest_pos);
+                  source.begin() + src_pos + safe_n,
+                  destination.begin() + dest_pos);
         // in
         return destination.size();
     }
@@ -444,7 +445,7 @@ namespace sdrcomms {
                         std::cout << "[" << channel << "] Process block: " << block.samples.size() << std::endl;
 #endif
                         // execute the callback
-                        std::map<std::string, std::shared_ptr<sdrcomms::IQBlock>> attachments {};
+                        std::map<std::string, std::shared_ptr<sdrcomms::IQBlock> > attachments{};
                         processor->process(block, attachments);
                     } catch (std::exception &e) {
                         std::cerr << "[" << channel << "] Exception in callback: " << e.what() << std::endl;

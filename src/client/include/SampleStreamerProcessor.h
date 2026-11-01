@@ -32,7 +32,7 @@ namespace sdrcomms {
      */
     class SampleStreamerProcessor : public SampleProcessor {
     public:
-        SampleStreamerProcessor(std::string udpServerAddress, int udpPort);
+        SampleStreamerProcessor(std::string udpServerAddress, int udpPort, size_t required_samples);
 
         void process(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) override;
 
@@ -52,7 +52,8 @@ namespace sdrcomms {
         int udpPort;
         std::atomic<bool> hasClient {false};
         std::atomic<bool> running {false};
-
+        // number of required samples.
+        size_t required_samples;
         // internal server socket file descriptor.
         int server_socket;
         // internal receive queue

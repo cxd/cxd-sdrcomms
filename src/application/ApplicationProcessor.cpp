@@ -11,7 +11,9 @@
 #include "constants.h"
 #include "DownsampleProcessor.h"
 
-ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udpPort, double source_sample_rate_hz,
+ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udpPort,
+                                           double source_sample_rate_hz,
+                                           size_t required_samples,
                                            std::string modelFile,
                                            std::string classMapFilename,
                                            std::string basePath,
@@ -20,6 +22,7 @@ ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udp
     this->udpServerAddress = udpServerAddress;
     this->udpPort = udpPort;
     this->source_sample_rate_hz = source_sample_rate_hz;
+    this->required_samples = required_samples;
     this->modelSpecFile = modelFile;
     this->classMapFilename = classMapFilename;
     this->basePath = basePath;
@@ -43,7 +46,8 @@ bool ApplicationProcessor::init() {
     // processors defined by the model spec file.
     processingChain = build_processing_chain(last_processor);
     // udp stream processing chain
-    this->sampleStreamerProcessor = std::make_unique<sdrcomms::SampleStreamerProcessor>(udpServerAddress, udpPort);
+    this->sampleStreamerProcessor = std::make_unique<sdrcomms::SampleStreamerProcessor>(
+        udpServerAddress, udpPort, required_samples);
     return true;
 }
 
@@ -138,6 +142,7 @@ void ApplicationProcessor::process(sdrcomms::IQBlock &block,
     auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->last_packet).count();
     if (delta >= ONE_SECOND) {
         last_packet = now;
+        std::cout << "Blocks per second: " << this->blocks_per_second << std::endl;
 #ifdef DEBUG_VERBOSE
         std::cout << "Blocks per second: " << this->blocks_per_second << std::endl;
 #endif

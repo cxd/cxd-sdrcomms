@@ -69,5 +69,65 @@ One downside is the Gibbs phenomenon.
 
 Alternate approach is a Polyphase FIR Decimation.
 
+The number of required samples to capture is based on the ratio of the
+original sampling rate in Hz (the target Hz we need to downsample into) 
+and the device sampling rate in Hz.
+
+If the target samples size is 2048 and the target sample rate was 6e3 Hz and we sample at 3e6 Hz
+Then:
+
+```
+required_samples_size = target_samples_size / (target_rate_hz / source_rate_hz))
+```
+
+eg:
+
+$r = (6e3/3e6) = 0.002$
+
+$2048 / r = 1024000 samples$
+
+But if a model is trained at a given sampling rate,
+we are assuming the transmission sampling rate is the same as the model sample rate.
+
+However the challenge is in detecting modulations, that
+the transmission sampling rates are variable.
+
+Sampling rate is scale, this is similar to a multi-resolution scaling problem.
+
+
+
+
+
+# Time to samples:
+
+$$
+N = F_s \times T
+$$
+
+where $N$ is the number of samples, $F_s$ is the sample rate in Hz and $T$ is the capture duration in seconds. 
+This gives samples per duration in seconds.
+
+FFT Resolution
+
+$$
+\Delta f = \frac{F_s}{N} = \frac{1}{T}
+$$
+
+$N$ is the number of samples.
+
+When we think about the duration of time required to capture a sample
+we need to look at the size of the frame in the message.
+For example if we have a Minimum transmission unit of 4098 samples at a sample rate of 3e6 Hz
+
+We can think about the duration of time required to capture a single frame when using a 3e6 Hz sample rate.
+
+$$
+T = \frac{4096}{3e6} \approx 0.001365 s = 1.365 ms
+$$
+
+But that is only if the transmission sample rate is 3e6 Hz as well.
+
+
+
 
 
