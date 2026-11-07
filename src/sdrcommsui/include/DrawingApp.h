@@ -55,7 +55,8 @@ namespace drawing {
     class DrawingApp {
     public:
         DrawingApp(Uint32 initFlags, std::string title, bool fullscreen, int width, int height,
-                   const std::shared_ptr<Sketch> &sketch);
+                   const std::shared_ptr<Sketch> &sketch,
+                   const std::shared_ptr<Sketch> &lineSketch);
 
         /**
          * Execute the event loop
@@ -77,10 +78,13 @@ namespace drawing {
         Uint32 initFlags;
         std::string title;
         std::shared_ptr<Sketch> sketch;
+        std::shared_ptr<Sketch> lineSketch;
         int width;
         int height;
         bool fullscreen;
         DisplayServer displayServer;
+
+
 
         std::chrono::steady_clock::time_point lastSecond;
         std::chrono::steady_clock::time_point lastTimeStep;

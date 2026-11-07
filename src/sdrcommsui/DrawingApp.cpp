@@ -4,15 +4,19 @@
 
 #include "include/DrawingApp.h"
 #include <iostream>
-
+#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_sdlrenderer2.h"
 #include "constants.h"
 
 namespace drawing {
     DrawingApp::DrawingApp(Uint32 initFlags, std::string title, bool fullscreen, int width, int height,
-                           const std::shared_ptr<Sketch> &sketch) {
+                           const std::shared_ptr<Sketch> &sketch,
+                           const std::shared_ptr<Sketch> &lineSketch) {
         this->initFlags = initFlags;
         this->title = title;
         this->sketch = sketch;
+        this->lineSketch = lineSketch;
         this->width = width;
         this->height = height;
         this->fullscreen = fullscreen;
@@ -31,9 +35,11 @@ namespace drawing {
         bool running = false;
 
         if (!fullscreen) {
-            Uint32 windowFlags = SDL_WINDOW_SHOWN;
+            Uint32 windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
 #if defined(__linux__) || defined(__unix__) || defined(WIN32)
             windowFlags |= SDL_WINDOW_OPENGL;
+#elif defined(__APPLE__)
+            windowFlags |= SDL_WINDOW_METAL;
 #endif
             window = SDL_CreateWindow(title.c_str(),
                                       SDL_WINDOWPOS_CENTERED,
@@ -81,6 +87,15 @@ namespace drawing {
         SDL_GetWindowSize(window, &width, &height);
         SDL_SetWindowSize(window, width, height);
 
+        // initialise ImGui
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGui::StyleColorsDark();
+
+        // initialise the window context
+        ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
+        ImGui_ImplSDLRenderer2_Init(renderer);
+
         running = true;
         SDL_Texture* canvas = nullptr;
         if (displayServer != DisplayServer::Wayland) {
@@ -97,6 +112,8 @@ namespace drawing {
         while (running) {
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
+                // process im gui events.
+                ImGui_ImplSDL2_ProcessEvent(&event);
                 if (event.type == SDL_QUIT) {
                     return 0;
                 }
@@ -105,6 +122,12 @@ namespace drawing {
                     height = event.window.data2;
                 }
             }
+            // Start the ImGui Frame
+            ImGui_ImplSDLRenderer2_NewFrame();
+            ImGui_ImplSDL2_NewFrame();
+            ImGui::NewFrame();
+            // begin the ImGui drawing steps
+            ImGui::Begin("SDR Comms UI");
             if (displayServer == DisplayServer::Wayland) {
                 render(renderer);
             } else {
@@ -112,6 +135,7 @@ namespace drawing {
                 render(renderer);
                 SDL_SetRenderTarget(renderer, NULL);
             }
+            ImGui::End();
 
             auto now = std::chrono::steady_clock::now();
             long delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->lastSecond).count();
@@ -134,9 +158,20 @@ namespace drawing {
                 // 4. Copy your clean, unghosted canvas snapshot straight to the window
                 SDL_RenderCopy(renderer, canvas, NULL, NULL);
             }
+            // before rendering we ned to tell ImGui to display
+            ImGui::Render();
+            // render the ImGui buffer
+            ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
+            // swap buffers
             SDL_RenderPresent(renderer);
 
         }
+        // destroy ImGui
+        ImGui_ImplSDLRenderer2_Shutdown();
+        ImGui_ImplSDL2_Shutdown();
+        ImGui::DestroyContext();
+
+        // destroy SDL
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
@@ -145,7 +180,35 @@ namespace drawing {
 
     void DrawingApp::render(SDL_Renderer *renderer) {
         SDL_SetRenderDrawColor(renderer, 10, 10, 10, 255);
+        SDL_RenderSetViewport(renderer, NULL);
         SDL_RenderClear(renderer);
+
+
+        // the view that displays the fft line plot can display in the top 30% of the screen.
+        SDL_Rect top_viewport;
+        top_viewport.x = 0;
+        top_viewport.y = 0;
+        top_viewport.w = width;
+        top_viewport.h = std::floor(height*0.3);
+        SDL_RenderSetViewport(renderer, &top_viewport);
+        SDL_RenderFillRect(renderer, &top_viewport);
+
+        lineSketch->DrawSketch(renderer, width, height, TimeStep, Frame, Fps);
+        SDL_RenderSetViewport(renderer, NULL);
+
+        // the view that represents the waterfall can be displayed at the bottom 70% of the screen.
+        SDL_Rect bottom_viewport;
+        bottom_viewport.x = 0;
+        bottom_viewport.y = std::floor(height*0.3);
+        bottom_viewport.w = width;
+        bottom_viewport.h = std::floor(height*0.7);
+
+        SDL_SetRenderDrawColor(renderer, 10, 10, 10, 255);
+
+        SDL_RenderSetViewport(renderer, &bottom_viewport);
+        SDL_RenderFillRect(renderer, &bottom_viewport);
+
         sketch->DrawSketch(renderer, width, height, TimeStep, Frame, Fps);
+        SDL_RenderSetViewport(renderer, NULL);
     }
 } // drawing

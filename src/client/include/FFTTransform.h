@@ -37,6 +37,13 @@ namespace sdrcomms {
          */
         std::vector<std::complex<float>> fft(const std::vector<std::complex<float> >& input);
 
+        /**
+         * fft shift the spectrum
+         * @param spectrum
+         * @return
+         */
+        std::vector<std::complex<float>> fftShift(const std::vector<std::complex<float>>& source);
+
     private:
         size_t fftSize;
         // calculated as fftSize * sizeof(std::complex<float>)

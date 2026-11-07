@@ -353,4 +353,18 @@ namespace sdrcomms {
         vkUnmapMemory(device, deviceMemory);
         return output;
     }
+
+    /**
+         * fft shift the spectrum
+         * @param spectrum
+         * @return
+         */
+    std::vector<std::complex<float>> FFTTransform::fftShift(const std::vector<std::complex<float>>& source) {
+        size_t half_size = source.size() / 2;
+        size_t N = source.size();
+        std::vector<std::complex<float> > output(source.size());
+        std::memcpy(output.data(), source.data() + half_size, (N - half_size) * sizeof(std::complex<float>));
+        std::memcpy(output.data() + half_size, source.data(), half_size * sizeof(std::complex<float>));
+        return output;
+    }
 } // sdrcomms

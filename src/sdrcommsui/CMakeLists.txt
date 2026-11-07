@@ -1,3 +1,63 @@
+# Fetch ImGui
+include(FetchContent)
+FetchContent_Declare(
+        imgui
+        GIT_REPOSITORY https://github.com/ocornut/imgui.git
+        GIT_TAG        features/string_view_with_docking # The 'docking' branch is highly recommended for IDE-like layouts
+)
+FetchContent_MakeAvailable(imgui)
+
+# ---------------------------------------------------------------------------
+# 2. Define the ImGui Core Sources (Platform-Agnostic)
+# ---------------------------------------------------------------------------
+set(IMGUI_DIR ${imgui_SOURCE_DIR})
+
+
+set(IMGUI_SOURCES
+        ${IMGUI_DIR}/imgui.cpp
+        ${IMGUI_DIR}/imgui_draw.cpp
+        ${IMGUI_DIR}/imgui_tables.cpp
+        ${IMGUI_DIR}/imgui_widgets.cpp
+        ${IMGUI_DIR}/imgui_demo.cpp
+
+        # Universal SDL2 platform platform-binding (Required everywhere)
+        ${IMGUI_DIR}/backends/imgui_impl_sdl2.cpp
+        # Graphics renderer binding
+        ${IMGUI_DIR}/backends/imgui_impl_sdlrenderer2.cpp
+)
+
+if (APPLE)
+    message(STATUS "Configuring ImGui Backend: SDL2 + Metal (macOS)")
+
+    # Append the Metal rendering backend source file (.mm for Objective-C++)
+    list(APPEND IMGUI_SOURCES ${IMGUI_DIR}/backends/imgui_impl_metal.mm)
+
+    # Link Apple's native graphics frameworks
+    find_library(METAL_FRAMEWORK Metal REQUIRED)
+    find_library(QUARTZ_FRAMEWORK QuartzCore REQUIRED)
+    set(PLATFORM_GRAPHICS_LIBS ${METAL_FRAMEWORK} ${QUARTZ_FRAMEWORK})
+else()
+    # Covers both Ubuntu Desktop and Raspbian (Raspberry Pi)
+    message(STATUS "Configuring ImGui Backend: SDL2 + OpenGL/GLES (Linux)")
+
+    # Append the standard OpenGL3 rendering backend source file
+    list(APPEND IMGUI_SOURCES ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp)
+
+    # Link the system OpenGL configuration drivers
+    find_package(OpenGL REQUIRED)
+    set(PLATFORM_GRAPHICS_LIBS OpenGL::GL)
+endif()
+
+# ---------------------------------------------------------------------------
+# 4. Create the Statically Linked ImGui Target
+# ---------------------------------------------------------------------------
+add_library(imgui_static STATIC ${IMGUI_SOURCES})
+# Expose the include directories so your main code can find "imgui.h"
+target_include_directories(imgui_static PUBLIC
+        ${IMGUI_DIR}
+        ${IMGUI_DIR}/backends
+)
+
 
 # Define your static library target first
 add_executable(sdrcommsui
@@ -20,6 +80,8 @@ add_executable(sdrcommsui
         include/DrawingApp.h
         SpectrumWaterfall.cpp
         include/SpectrumWaterfall.h
+        FFTLinePlot.cpp
+        include/FFTLinePlot.h
 
 )
 FetchContent_GetProperties(cli11)
@@ -63,9 +125,11 @@ elseif (NOT APPLE AND (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64") AND NOT CMAKE_CR
 
     # Safely look for the system package using CMake's standard config modules
     find_package(SDL2 REQUIRED)
+    # link against sdl
+    target_link_libraries(imgui_static PRIVATE SDL2::SDL2-static)
 
     # Link your target against the system discovered static target
-    target_link_libraries(sdrcommsui PUBLIC SDL2::SDL2-static)
+    target_link_libraries(sdrcommsui PUBLIC SDL2::SDL2-static imgui_static)
 
     # Map headers to the system path
     target_include_directories(sdrcommsui PUBLIC ${SDL2_INCLUDE_DIRS})
@@ -79,8 +143,10 @@ elseif (NOT APPLE AND (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64"))
     # Safely look for the system package using CMake's standard config modules
     find_package(SDL2 REQUIRED)
 
+    # link against sdl
+    target_link_libraries(imgui_static PRIVATE SDL2::SDL2)
     # Link your target against the system discovered static target
-    target_link_libraries(sdrcommsui PUBLIC SDL2::SDL2)
+    target_link_libraries(sdrcommsui PUBLIC SDL2::SDL2 imgui_static)
 
     # Map headers to the system path
     target_include_directories(sdrcommsui PUBLIC ${SDL2_INCLUDE_DIRS})
@@ -113,9 +179,10 @@ else ()
     set(SDL_STATIC ON CACHE BOOL "" FORCE)
 
     FetchContent_MakeAvailable(SDL2)
-
+    # link against sdl
+    target_link_libraries(imgui_static PRIVATE SDL2::SDL2-static)
     # Link against the freshly compiled static target
-    target_link_libraries(sdrcommsui PUBLIC SDL2::SDL2-static)
+    target_link_libraries(sdrcommsui PUBLIC SDL2::SDL2-static imgui_static)
 
     # Map headers to the downloaded source directory inclusion tree
     target_include_directories(sdrcommsui PUBLIC ${sdl2_SOURCE_DIR}/include)

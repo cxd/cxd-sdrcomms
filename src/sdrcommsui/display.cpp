@@ -22,16 +22,25 @@ namespace sdrcommsui {
         this->sampleSize = sample_size;
         this->netClient = std::make_unique<NetClient>(udpServer, port, sample_size);
 
+        this->lineSketchQueue = std::make_shared<sdrcomms::ReceiveQueue>(MAX_QUEUE_SIZE, sample_size);
+        this->waterfallSketchQueue = std::make_shared<sdrcomms::ReceiveQueue>(MAX_QUEUE_SIZE, sample_size);
+
         this->sketch = std::make_shared<SpectrumWaterfall>(width,
                                     height,
                                     sample_size,
-                                    this->netClient->getReceiveQueue());
+                                    this->waterfallSketchQueue);
+        this->lineSketch = std::make_shared<FFTLinePlot>(
+            width,
+            height,
+            sample_size,
+            this->lineSketchQueue);
         this->app = std::make_unique<drawing::DrawingApp>(SDL_INIT_VIDEO,
                                                           "Spectrum Waterfall",
                                                           false,
                                                           width,
                                                           height,
-                                                          this->sketch);
+                                                          this->sketch,
+                                                          this->lineSketch);
     }
 
     void Display::run() {
@@ -42,8 +51,13 @@ namespace sdrcommsui {
         this->subscibe();
         // sleep for a while to allow the client to start and then initialise the UI
         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-
+        this->receive_thread = std::thread(
+           [this]() {
+               this->receive_blocks();
+           }
+       );
         // might need to run this in the background.
+        this->lineSketch->init();
         this->sketch->init();
         this->app->Run();
 
@@ -54,6 +68,26 @@ namespace sdrcommsui {
             this->unsubscribe();
             this->disconnect();
             running.store(false, std::memory_order_relaxed);
+        }
+        if (this->receive_thread.joinable()) {
+            this->receive_thread.join();
+        }
+    }
+
+    /**
+        * receiver thread updates blocks
+        */
+    void Display::receive_blocks() {
+        while (running.load(std::memory_order_relaxed)) {
+            sdrcomms::IQBlock block;
+            if (this->netClient->getReceiveQueue()->pop(block)) {
+                // copy the data into the child queues.
+                std::vector<std::complex<float>> copySamples = block.samples;
+                this->waterfallSketchQueue->push(block.timestampMs, block.channel, copySamples, copySamples.size(), block.centerFreq);
+                copySamples = block.samples;
+                this->lineSketchQueue->push(block.timestampMs, block.channel, copySamples, copySamples.size(), block.centerFreq);
+
+            }
         }
     }
 

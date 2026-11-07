@@ -40,6 +40,7 @@ namespace sdrcommsui {
     private:
         int width;
         int height;
+
         std::shared_ptr<sdrcomms::ReceiveQueue> receiveQueue;
         size_t fftSize;
         std::atomic<bool> isInit;
@@ -50,6 +51,8 @@ namespace sdrcommsui {
         std::atomic<float> centerFreq;
         std::shared_mutex updateMutex;
         std::thread receive_thread;
+
+        SDL_Texture *texture = nullptr;
 
         const size_t MAX_QUEUE_SIZE = 256;
 

@@ -46,14 +46,14 @@ namespace sdrcommsui {
      */
     void SpectrumWaterfall::DrawSketch(SDL_Renderer *renderer, int width, int height,
                                        int timestep, int frame, int fps) {
+        std::shared_lock<std::shared_mutex> lock(this->updateMutex);
+
         if (this->spectrum.size() < this->MAX_QUEUE_SIZE) {
             return;
         }
-        SDL_RenderClear(renderer);
-        //std::shared_lock<std::shared_mutex> lock(this->updateMutex);
         std::vector<std::vector<float>> averages{this->spectrum.begin(), this->spectrum.end()};
         this->draw_blocks(renderer, averages);
-        //lock.unlock();
+
     }
 
     /**
@@ -69,12 +69,20 @@ namespace sdrcommsui {
         auto [min, max] = this->get_min_max(averages);
         size_t num_rows = std::min(averages.size(), this->MAX_QUEUE_SIZE);
 
+        size_t block_count = averages[0].size() * averages.size();
+
+        std::vector<SDL_Vertex> vertices(block_count*4);
+        std::vector<int> indices(block_count*6);
+
+
         for (size_t i = 0; i < num_rows; i++) {
             int x_pos = 0;
             if (i >= num_rows) {
                 break;
             }
             size_t num_blocks = averages[i].size();
+
+
             for (size_t j = 0; j < num_blocks; j++) {
 
                 float avg = this->normalizePower(averages[i][j],
@@ -194,10 +202,11 @@ namespace sdrcommsui {
                 // for the spectrum. Each point in the spectrum will be displayed as a small rectangle of N pixels wide.
                 // the last value of the spectrum is drawn at the bottom of the rectangle.
                 // we should modify the spectrum to be a sliding average of the last N values.
-                std::vector<std::complex<float> > fftshifted = this->fftShift(fftOut);
+                std::vector<std::complex<float> > fftshifted = this->fft->fftShift(fftOut);
                 std::vector<float> block_averages = this->slidingAverage(fftshifted);
 
                 this->centerFreq = block.centerFreq;
+
                 // queue the average abs power for blocks in the spectrum
                 this->spectrum.push_back(block_averages);
                 this->iqBlocks.push_back(block);
@@ -210,19 +219,7 @@ namespace sdrcommsui {
         }
     }
 
-    /**
-         * fft shift the spectrum
-         * @param spectrum
-         * @return
-         */
-    std::vector<std::complex<float> > SpectrumWaterfall::fftShift(const std::vector<std::complex<float> > &source) {
-        size_t half_size = source.size() / 2;
-        size_t N = source.size();
-        std::vector<std::complex<float> > output(source.size());
-        std::memcpy(output.data(), source.data() + half_size, (N - half_size) * sizeof(std::complex<float>));
-        std::memcpy(output.data() + half_size, source.data(), half_size * sizeof(std::complex<float>));
-        return output;
-    }
+
 
     /**
      * average the spectrum for block sizes within our drawable dimensions
