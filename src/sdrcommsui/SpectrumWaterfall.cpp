@@ -35,6 +35,15 @@ namespace sdrcommsui {
         return true;
     }
 
+    void SpectrumWaterfall::stop() {
+        isRunning.store(false, std::memory_order_relaxed);
+        isInit.store(false, std::memory_order_relaxed);
+        this->fft->cleanup();
+        if (this->receive_thread.joinable()) {
+            this->receive_thread.join();
+        }
+    }
+
     /**
      * Draw the spectrum waterfall.
      * @param renderer
@@ -81,7 +90,8 @@ namespace sdrcommsui {
                 break;
             }
             size_t num_blocks = averages[i].size();
-
+            const float top = static_cast<float>(i)*height/num_rows;
+            const float bottom = static_cast<float>(i+1)*height/num_rows;
 
             for (size_t j = 0; j < num_blocks; j++) {
 
@@ -89,14 +99,30 @@ namespace sdrcommsui {
                     min,
                     max);
                 SDL_Color col = this->getSpectrumColor(avg);
-                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-                SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, col.a);
-                SDL_Rect rect = SDL_Rect{x_pos, y_pos, this->block_width, y_block_size};
-                SDL_RenderFillRect(renderer, &rect);
-                x_pos += this->block_width;
+
+                const float left = static_cast<float>(j)*width/num_blocks;
+                const float right = static_cast<float>(j+1)*width/num_blocks;
+
+                int base_index = static_cast<int>(vertices.size());
+                vertices.push_back({ {left, top}, col, {0, 0} });
+                vertices.push_back({ {right, top}, col, {0, 0} });
+                vertices.push_back({ {right, bottom}, col, {0, 0}});
+                vertices.push_back( { {left, bottom}, col, {0, 0} });
+
+                indices.insert(indices.end(), {
+                    base_index, base_index + 1, base_index + 2,
+                    base_index, base_index + 2, base_index + 3
+                });
+
+
             }
-            y_pos += y_block_size;
+
         }
+
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+
+        SDL_RenderGeometry(renderer, nullptr, vertices.data(), static_cast<int>(vertices.size()),
+            indices.data(), static_cast<int>(indices.size()));
 
     }
 

@@ -87,7 +87,7 @@ namespace sdrcommsui {
         std::thread heartbeat_thread;
 
         static const long ONE_SECOND = 1000;
-        long blocks_per_second;
+        long blocks_per_second = 0;
         std::chrono::time_point<std::chrono::system_clock> last_packet;
 
         /**

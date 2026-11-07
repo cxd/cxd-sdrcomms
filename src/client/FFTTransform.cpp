@@ -309,6 +309,10 @@ namespace sdrcomms {
         if (!isInit) {
             return {};
         }
+        if (input.size() < fftSize) {
+            std::cerr << "FFTTransform::fft: input size does not match fftSize" << std::endl;
+            throw std::runtime_error("FFTTransform::fft: input size does not match fftSize");
+        }
         void *data;
         uint32_t buffer_size = bufferSize;
         vkMapMemory(device, deviceMemory, 0, buffer_size, 0, &data);

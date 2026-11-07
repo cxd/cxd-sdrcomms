@@ -37,6 +37,19 @@ namespace sdrcommsui {
     }
 
     /**
+         * stop processing
+         */
+    void FFTLinePlot::stop() {
+        isRunning.store(false, std::memory_order_relaxed);
+        isInit.store(false, std::memory_order_relaxed);
+        this->fft->cleanup();
+        if (this->receive_thread.joinable()) {
+            this->receive_thread.join();
+        }
+    }
+
+
+    /**
      * Draw the spectrum waterfall.
      * @param renderer
      * @param width
@@ -114,7 +127,6 @@ namespace sdrcommsui {
          * @return
          */
     std::vector<float> FFTLinePlot::slidingAverage(const std::vector<std::complex<float>>& spectrum) {
-        size_t blocks_size = spectrum.size() / this->block_width;
         size_t num_blocks = this->width / this->block_width;
         std::vector<float> block_averages(num_blocks);
         for (size_t i = 0; i < num_blocks; i++) {
@@ -147,7 +159,6 @@ namespace sdrcommsui {
                 std::unique_lock<std::shared_mutex> lock(this->updateMutex);
 
                 std::vector<float> localspectrum = slidingAverage(this->fft->fftShift(fftOut));
-                this->spectrum.clear();
                 this->centerFreq = block.centerFreq;
 
                 auto [min_pow, max_pow] = this->get_min_max(localspectrum);

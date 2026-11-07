@@ -69,9 +69,14 @@ namespace sdrcommsui {
             this->disconnect();
             running.store(false, std::memory_order_relaxed);
         }
+        // stop queue processing in the sketches.
+        this->lineSketch->stop();
+        this->sketch->stop();
+
         if (this->receive_thread.joinable()) {
             this->receive_thread.join();
         }
+
     }
 
     /**

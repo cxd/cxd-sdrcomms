@@ -17,21 +17,19 @@ namespace sdrcomms {
 
     bool ReceiveQueue::push(long long timestamp, int channel, const std::vector<std::complex<float>>& data, size_t size, double freq) {
         size_t current_write = write_index.load(std::memory_order_relaxed);
-        size_t next_write = (current_write + 1 % capacity);
-        if (next_write >= blocks.size() - 1) {
-            next_write = 0;
-        }
+        size_t next_write = (current_write + 1) % capacity;
+
         // check if the next write is equal to the read index.
         if (next_write == read_index.load(std::memory_order_relaxed)) {
             return false;
         }
 
         // vector copy samples.
-        blocks[next_write].timestampMs = timestamp;
-        blocks[next_write].channel = channel;
-        blocks[next_write].sample_size = size;
-        blocks[next_write].samples = std::move(data);
-        blocks[next_write].centerFreq = freq;
+        blocks[current_write].timestampMs = timestamp;
+        blocks[current_write].channel = channel;
+        blocks[current_write].sample_size = size;
+        blocks[current_write].samples = data;
+        blocks[current_write].centerFreq = freq;
 
         // update the current write index.
         write_index.store(next_write, std::memory_order_relaxed);
@@ -58,9 +56,7 @@ namespace sdrcomms {
 
         // move the read position
         size_t next_read = (current_read + 1) % capacity;
-        if (next_read >= blocks.size() - 1) {
-            next_read = 0;
-        }
+
         read_index.store(next_read, std::memory_order_relaxed);
         return true;
     }

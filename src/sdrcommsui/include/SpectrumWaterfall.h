@@ -26,6 +26,12 @@ namespace sdrcommsui {
         bool init();
 
         /**
+         * stop processing
+         */
+        void stop();
+
+
+        /**
          * Draw the spectrum waterfall.
          * @param renderer
          * @param width
@@ -59,7 +65,7 @@ namespace sdrcommsui {
         /**
          * display block width in pixels
          */
-        const int block_width = 10;
+        const int block_width = 2;
 
         const float min_spectrum_db = -200.0f;
 
