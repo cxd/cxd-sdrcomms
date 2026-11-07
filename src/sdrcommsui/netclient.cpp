@@ -109,6 +109,7 @@ namespace sdrcommsui {
         if (isConnected.load(std::memory_order_relaxed)) {
             if (isSubscribed.load(std::memory_order_acquire)) {
                 this->unsubscribe();
+                isSubscribed.store(false, std::memory_order_release);
             }
             // let the threads join
             if (receive_thread.joinable()) {
@@ -121,6 +122,7 @@ namespace sdrcommsui {
             if (server_socket != 0) {
                 close(server_socket);
             }
+            isConnected.store(false, std::memory_order_release);
         }
         // already disconnected
         return true;

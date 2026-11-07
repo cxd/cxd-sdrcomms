@@ -82,6 +82,8 @@ add_executable(sdrcommsui
         include/SpectrumWaterfall.h
         FFTLinePlot.cpp
         include/FFTLinePlot.h
+        ControlView.cpp
+        include/ControlView.h
 
 )
 FetchContent_GetProperties(cli11)

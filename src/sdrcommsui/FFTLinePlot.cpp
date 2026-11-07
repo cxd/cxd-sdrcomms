@@ -42,10 +42,10 @@ namespace sdrcommsui {
     void FFTLinePlot::stop() {
         isRunning.store(false, std::memory_order_relaxed);
         isInit.store(false, std::memory_order_relaxed);
-        this->fft->cleanup();
         if (this->receive_thread.joinable()) {
             this->receive_thread.join();
         }
+        this->fft->cleanup();
     }
 
 

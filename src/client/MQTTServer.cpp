@@ -120,6 +120,7 @@ namespace sdrcomms {
          */
     void MQTTServer::on_connect(struct mosquitto *mosq, void *obj, int result) {
         // successful connection to the server we can begin processing messages.
+        std::cout << "Connected to MQTT server" << std::endl;
     }
 
     /**
