@@ -46,9 +46,11 @@ namespace sdrcomms {
             // the inner payload is prefixed by a binaryio header as well
             size_t byte_size = BinaryIO::header_byte_size();
             byte_size += this->total_bytes;
-            BinaryIO::write_pod(out, byte_size);
+            uint64_t temp_size = static_cast<uint64_t>(byte_size);
+            BinaryIO::write_pod(out, temp_size);
         } else {
-            BinaryIO::write_pod(out, this->total_bytes);
+            uint64_t temp_size = static_cast<uint64_t>(total_bytes);
+            BinaryIO::write_pod(out, temp_size);
         }
         return true;
     }
@@ -65,7 +67,9 @@ namespace sdrcomms {
         uint32_t chunk_index;
         BinaryIO::read_pod(in, chunk_index);
         size_t total_bytes;
-        BinaryIO::read_pod(in, total_bytes);
+        uint64_t temp_bytes;
+        BinaryIO::read_pod(in, temp_bytes);
+        total_bytes = static_cast<size_t>(temp_bytes);
         if (chunk_index == 0) {
             size_t byte_size = BinaryIO::header_byte_size();
             total_bytes -= byte_size;
