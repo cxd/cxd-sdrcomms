@@ -14,7 +14,9 @@
 namespace sdrcomms {
     class MQTTServer {
     public:
-        MQTTServer(std::string serverAddress, int port, std::shared_ptr<MessageQueue<ControlMessage>> sendToClientQueue);
+        MQTTServer(std::string serverAddress, int port, std::shared_ptr<MessageQueue<ControlMessage>> sendToClientQueue,
+            std::string clientId = "sdrcomms::MQTTServer",
+            std::vector<std::string> subscriptions = {});
 
         bool init();
         bool start();
@@ -34,7 +36,10 @@ namespace sdrcomms {
         std::thread serverThread;
         std::thread workerThread;
         mosquitto* mServer;
-
+        // the list of topics to subscribe to after connection.
+        std::vector<std::string> subscriptions = {};
+        // mosquitto client id.
+        std::string clientId = "sdrcomms::MQTTServer";
         /**
          * messages arriving from clients external to this process
          */

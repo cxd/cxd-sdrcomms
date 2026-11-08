@@ -6,8 +6,11 @@
 #define SDRCOMMS_DISPLAY_H
 #include <memory>
 
+#include "ControlMessage.h"
+#include "ControlView.h"
 #include "DrawingApp.h"
 #include "FFTLinePlot.h"
+#include "MessageQueue.h"
 #include "netclient.h"
 #include "sketch.h"
 #include "SpectrumWaterfall.h"
@@ -21,7 +24,13 @@ namespace sdrcommsui {
          * @param port
          * @param sample_size
          */
-        Display(std::string udpServer, int port, size_t sample_size, int width, int height);
+        Display(std::string udpServer,
+            int port,
+            size_t sample_size,
+            int width,
+            int height,
+            std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> inboundQueue,
+            std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> outputBoundQueue);
 
         /**
          * run the display
@@ -65,7 +74,9 @@ namespace sdrcommsui {
 
         std::shared_ptr<sdrcomms::ReceiveQueue> lineSketchQueue;
         std::shared_ptr<sdrcomms::ReceiveQueue> waterfallSketchQueue;
+        std::shared_ptr<sdrcomms::ReceiveQueue> controlSketchQueue;
 
+        std::shared_ptr<ControlView> controlView;
 
         std::thread receive_thread;
 

@@ -12,11 +12,13 @@
 namespace drawing {
     DrawingApp::DrawingApp(Uint32 initFlags, std::string title, bool fullscreen, int width, int height,
                            const std::shared_ptr<Sketch> &sketch,
-                           const std::shared_ptr<Sketch> &lineSketch) {
+                           const std::shared_ptr<Sketch> &lineSketch,
+                           const std::shared_ptr<Sketch> &controlView) {
         this->initFlags = initFlags;
         this->title = title;
         this->sketch = sketch;
         this->lineSketch = lineSketch;
+        this->controlView = controlView;
         this->width = width;
         this->height = height;
         this->fullscreen = fullscreen;
@@ -25,7 +27,6 @@ namespace drawing {
     }
 
     int DrawingApp::Run() {
-
         if (SDL_Init(this->initFlags) < 0) {
             return -1;
         }
@@ -97,13 +98,13 @@ namespace drawing {
         ImGui_ImplSDLRenderer2_Init(renderer);
 
         running = true;
-        SDL_Texture* canvas = nullptr;
+        SDL_Texture *canvas = nullptr;
         if (displayServer != DisplayServer::Wayland) {
             SDL_RenderSetViewport(renderer, NULL);
             canvas = SDL_CreateTexture(renderer,
-                                            SDL_PIXELFORMAT_RGBA8888,
-                                            SDL_TEXTUREACCESS_TARGET,
-                                            width, height);
+                                       SDL_PIXELFORMAT_RGBA8888,
+                                       SDL_TEXTUREACCESS_TARGET,
+                                       width, height);
         } else if (displayServer == DisplayServer::Wayland) {
             SDL_PumpEvents();
             SDL_Delay(50);
@@ -128,6 +129,7 @@ namespace drawing {
             ImGui::NewFrame();
             // begin the ImGui drawing steps
             ImGui::Begin("SDR Comms UI");
+
             if (displayServer == DisplayServer::Wayland) {
                 render(renderer);
             } else {
@@ -164,7 +166,6 @@ namespace drawing {
             ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
             // swap buffers
             SDL_RenderPresent(renderer);
-
         }
         // destroy ImGui
         ImGui_ImplSDLRenderer2_Shutdown();
@@ -183,13 +184,14 @@ namespace drawing {
         SDL_RenderSetViewport(renderer, NULL);
         SDL_RenderClear(renderer);
 
+        controlView->DrawSketch(renderer, width, height, TimeStep, Frame, Fps);
 
         // the view that displays the fft line plot can display in the top 30% of the screen.
         SDL_Rect top_viewport;
         top_viewport.x = 0;
         top_viewport.y = 0;
         top_viewport.w = width;
-        top_viewport.h = std::floor(height*0.3);
+        top_viewport.h = std::floor(height * 0.3);
         SDL_RenderSetViewport(renderer, &top_viewport);
         SDL_RenderFillRect(renderer, &top_viewport);
 
@@ -199,9 +201,9 @@ namespace drawing {
         // the view that represents the waterfall can be displayed at the bottom 70% of the screen.
         SDL_Rect bottom_viewport;
         bottom_viewport.x = 0;
-        bottom_viewport.y = std::floor(height*0.3);
+        bottom_viewport.y = std::floor(height * 0.3);
         bottom_viewport.w = width;
-        bottom_viewport.h = std::floor(height*0.7);
+        bottom_viewport.h = std::floor(height * 0.7);
 
         SDL_SetRenderDrawColor(renderer, 10, 10, 10, 255);
 

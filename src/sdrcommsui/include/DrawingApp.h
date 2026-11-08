@@ -56,7 +56,8 @@ namespace drawing {
     public:
         DrawingApp(Uint32 initFlags, std::string title, bool fullscreen, int width, int height,
                    const std::shared_ptr<Sketch> &sketch,
-                   const std::shared_ptr<Sketch> &lineSketch);
+                   const std::shared_ptr<Sketch> &lineSketch,
+                   const std::shared_ptr<Sketch> &controlView);
 
         /**
          * Execute the event loop
@@ -79,6 +80,7 @@ namespace drawing {
         std::string title;
         std::shared_ptr<Sketch> sketch;
         std::shared_ptr<Sketch> lineSketch;
+        std::shared_ptr<Sketch> controlView;
         int width;
         int height;
         bool fullscreen;

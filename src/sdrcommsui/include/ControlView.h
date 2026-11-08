@@ -11,15 +11,27 @@
 
 #include "ControlMessage.h"
 #include "MessageQueue.h"
+#include "ReceiveQueue.h"
 #include "sketch.h"
 
 namespace sdrcommsui {
     class ControlView : public drawing::Sketch  {
     public:
         ControlView(std::string udpServer, int port, double centerFreq,
+            std::shared_ptr<sdrcomms::ReceiveQueue> receiveQueue,
             std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> inboundMessageQueue,
             std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> outboundMessageQueue);
 
+        /**
+         * initialise the threads
+         * @return
+         */
+        bool init();
+
+        /**
+         * stop reading queues
+         */
+        void stop();
 
         /**
          * Draw the spectrum waterfall.
@@ -36,11 +48,12 @@ namespace sdrcommsui {
     private:
         std::string udpServer;
         int port;
-        bool autoScan;
-        long long timestampDb;
+        bool autoScan = true;
+        long long timestampMs;
         double centerFreq;
-        std::string classLabel;
-        double confidence;
+        long long classTimestampMs = 0;
+        std::string classLabel = "";
+        double confidence = 0;
 
 
         std::atomic<bool> isInit;
@@ -50,8 +63,25 @@ namespace sdrcommsui {
 
         std::thread inbound_msg_thread;
 
+        std::shared_ptr<sdrcomms::ReceiveQueue> receiveQueue;
+
         std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> inboundMessageQueue;
         std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> outboundMessageQueue;
+
+        /**
+         * use current settings to send the control frequency message.
+         */
+        void send_control_frequency_msg();
+
+        /**
+         * consume inbound messages
+         */
+        void receive_inbound_messages();
+
+        /**
+         * receive udp stream
+         */
+        void receive_stream();
     };
 }
 

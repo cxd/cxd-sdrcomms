@@ -10,11 +10,15 @@
 
 namespace sdrcomms {
     MQTTServer::MQTTServer(std::string serverAddress, int port,
-                           std::shared_ptr<MessageQueue<ControlMessage> > sendToClientQueue) {
+                           std::shared_ptr<MessageQueue<ControlMessage> > sendToClientQueue,
+                           std::string clientId,
+                           std::vector<std::string> subscriptions) {
         this->serverAddress = serverAddress;
         this->port = port;
         this->messageQueue = std::make_shared<MessageQueue<ControlMessage> >(DEFAULT_QUEUE_SIZE);
         this->sendToClientQueue = sendToClientQueue;
+        this->clientId = clientId;
+        this->subscriptions = subscriptions;
     }
 
     /**
@@ -31,7 +35,7 @@ namespace sdrcomms {
             return false;
         }
         bool clean_session = true;
-        this->mServer = mosquitto_new("sdrcomms::MQTTServer",
+        this->mServer = mosquitto_new(clientId.c_str(),
                                       clean_session,
                                       this); // construct with this to pass through
         if (this->mServer == nullptr) {
@@ -120,7 +124,14 @@ namespace sdrcomms {
          */
     void MQTTServer::on_connect(struct mosquitto *mosq, void *obj, int result) {
         // successful connection to the server we can begin processing messages.
-        std::cout << "Connected to MQTT server" << std::endl;
+        if (result == 0) {
+            std::cout << "Connected to MQTT server" << std::endl;
+            for (auto topic : subscriptions) {
+                mosquitto_subscribe(mosq, NULL, topic.c_str(), 0);
+            }
+        } else {
+            std::cout << "Failed to connect to MQTT server" << std::endl;
+        }
     }
 
     /**
@@ -151,13 +162,14 @@ namespace sdrcomms {
             return;
         }
         // successfully read message
+        std::cout << "MQTTServer::on_message: " << msg.message_type_to_string() << std::endl;
         messageQueue->push(msg);
     }
 
     void MQTTServer::send_control_command(const std::string &message_topic, const ControlMessage &msg) {
         const std::vector<uint8_t> &msg_cbor = msg.toCBOR();
         // Compress down to highly optimized binary CBOR vector
-        std::string target_topic = "sdrcomms/" + message_topic + "/control";
+        std::string target_topic = "sdrcomms/" + message_topic ;
 
         mosquitto_publish(this->mServer, nullptr, target_topic.c_str(),
                           msg_cbor.size(), msg_cbor.data(),

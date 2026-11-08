@@ -7,6 +7,7 @@
 
 #include <iostream>
 
+#include "constants.h"
 #include "include/SpectrumWaterfall.h"
 
 namespace sdrcommsui {
@@ -16,7 +17,9 @@ namespace sdrcommsui {
          * @param port
          * @param sample_size
          */
-    Display::Display(std::string udpServer, int port, size_t sample_size, int width, int height) {
+    Display::Display(std::string udpServer, int port, size_t sample_size, int width, int height,
+                     std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage> > inboundQueue,
+                     std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage> > outputBoundQueue) {
         this->udpServer = udpServer;
         this->port = port;
         this->sampleSize = sample_size;
@@ -24,23 +27,32 @@ namespace sdrcommsui {
 
         this->lineSketchQueue = std::make_shared<sdrcomms::ReceiveQueue>(MAX_QUEUE_SIZE, sample_size);
         this->waterfallSketchQueue = std::make_shared<sdrcomms::ReceiveQueue>(MAX_QUEUE_SIZE, sample_size);
+        this->controlSketchQueue = std::make_shared<sdrcomms::ReceiveQueue>(MAX_QUEUE_SIZE, sample_size);
 
         this->sketch = std::make_shared<SpectrumWaterfall>(width,
-                                    height,
-                                    sample_size,
-                                    this->waterfallSketchQueue);
+                                                           height,
+                                                           sample_size,
+                                                           this->waterfallSketchQueue);
         this->lineSketch = std::make_shared<FFTLinePlot>(
             width,
             height,
             sample_size,
             this->lineSketchQueue);
+
+        this->controlView = std::make_shared<ControlView>(
+            udpServer, port, sdrcomms::DEFAULT_CENTER_FREQUENCY,
+            this->controlSketchQueue,
+            inboundQueue,
+            outputBoundQueue);
+
         this->app = std::make_unique<drawing::DrawingApp>(SDL_INIT_VIDEO,
                                                           "Spectrum Waterfall",
                                                           false,
                                                           width,
                                                           height,
                                                           this->sketch,
-                                                          this->lineSketch);
+                                                          this->lineSketch,
+                                                          this->controlView);
     }
 
     void Display::run() {
@@ -52,15 +64,15 @@ namespace sdrcommsui {
         // sleep for a while to allow the client to start and then initialise the UI
         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         this->receive_thread = std::thread(
-           [this]() {
-               this->receive_blocks();
-           }
-       );
+            [this]() {
+                this->receive_blocks();
+            }
+        );
         // might need to run this in the background.
         this->lineSketch->init();
         this->sketch->init();
+        this->controlView->init();
         this->app->Run();
-
     }
 
     void Display::stop() {
@@ -72,11 +84,11 @@ namespace sdrcommsui {
         // stop queue processing in the sketches.
         this->lineSketch->stop();
         this->sketch->stop();
+        this->controlView->stop();
 
         if (this->receive_thread.joinable()) {
             this->receive_thread.join();
         }
-
     }
 
     /**
@@ -87,10 +99,15 @@ namespace sdrcommsui {
             sdrcomms::IQBlock block;
             if (this->netClient->getReceiveQueue()->pop(block)) {
                 // copy the data into the child queues.
-                std::vector<std::complex<float>> copySamples = block.samples;
-                this->waterfallSketchQueue->push(block.timestampMs, block.channel, copySamples, copySamples.size(), block.centerFreq);
+                std::vector<std::complex<float> > copySamples = block.samples;
+                this->waterfallSketchQueue->push(block.timestampMs, block.channel, copySamples, copySamples.size(),
+                                                 block.centerFreq);
                 copySamples = block.samples;
-                this->lineSketchQueue->push(block.timestampMs, block.channel, copySamples, copySamples.size(), block.centerFreq);
+                this->lineSketchQueue->push(block.timestampMs, block.channel, copySamples, copySamples.size(),
+                                            block.centerFreq);
+                copySamples = block.samples;
+                this->controlSketchQueue->push(block.timestampMs, block.channel, copySamples, copySamples.size(),
+                                            block.centerFreq);
 
             }
         }

@@ -171,8 +171,21 @@ int main(int argc, char **argv) {
         client->StopStreaming();
         return 1;
     }
+
+    std::vector<std::string> subscriptions = {
+        "sdrcomms/auto_scan",
+        "sdrcomms/stop_scan",
+        "sdrcomms/set_freq",
+        "sdrcomms/ack/client",
+        "sdrcomms/nack/client"
+    };
+
     // we want to initialise the mqtt server to handle control channel communications.
-    std::shared_ptr<sdrcomms::MQTTServer> mqttServer = std::make_shared<sdrcomms::MQTTServer>(mqttServerUri, mqtt_port, sendToClientQueue);
+    std::shared_ptr<sdrcomms::MQTTServer> mqttServer = std::make_shared<sdrcomms::MQTTServer>(mqttServerUri,
+        mqtt_port,
+        sendToClientQueue,
+        "sdrcomms::ScanAndClassify",
+        subscriptions);
     if (!mqttServer->init() || !mqttServer->start()) {
         std::cerr << "Could not connect to mqtt service: " << mqttServerUri << ":" << mqtt_port << std::endl;
         mqttServer->stop();
