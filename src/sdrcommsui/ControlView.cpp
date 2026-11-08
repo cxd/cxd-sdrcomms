@@ -34,7 +34,7 @@ namespace sdrcommsui {
             });
 
         inbound_msg_thread = std::thread(
-            [this] {
+            [this]() {
                 this->receive_inbound_messages();
             });
     }
