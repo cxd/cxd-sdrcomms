@@ -4,7 +4,7 @@
 
 #ifndef SDRCOMMS_CONTROLMESSAGE_H
 #define SDRCOMMS_CONTROLMESSAGE_H
-#include <mosquitto/libmosquitto.h>
+#include <mosquitto.h>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
