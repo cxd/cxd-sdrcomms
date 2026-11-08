@@ -147,6 +147,12 @@ FetchContent_Declare(json
         GIT_TAG v3.12.0)
 FetchContent_MakeAvailable(json)
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    # -include forces the compiler to treat <cstdint> as if it were written
+    # at the very top of every single source file.
+    # this is to get around issues compiling SPIRV
+    add_compile_options(-include cstdint)
+endif()
 
 add_library(client_static STATIC include/client.h
         client.cpp
