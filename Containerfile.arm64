@@ -36,6 +36,7 @@ RUN apt-get update && apt-get install -y \
     mosquitto-dev libmosquitto-dev \
     libonnxruntime-dev libonnxruntime-providers \
     libliquid-dev \
+    libfftw3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the inner container context path
