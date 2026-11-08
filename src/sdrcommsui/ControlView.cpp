@@ -138,7 +138,7 @@ namespace sdrcommsui {
 
     void ControlView::receive_stream() {
         while (isRunning.load(std::memory_order_relaxed)) {
-            sdrcomms::IQBlock block;
+            sdrcomms::IQBlock block {};
             if (receiveQueue->pop(block)) {
                 std::shared_lock<std::shared_mutex> lock(this->updateMutex);
                 centerFreq = block.centerFreq;

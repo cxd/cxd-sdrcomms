@@ -15,14 +15,14 @@ namespace sdrcomms {
         IQBlock() = default;
         IQBlock(size_t sample_size);
         IQBlock(int channel, long long timestampMs, size_t sample_size, const std::vector<std::complex<float>> &samples);
-        size_t sample_size;
+        size_t sample_size = 0;
         std::vector<std::complex<float>> samples {};
-        int channel;
+        int channel = 0;
         /**
          * time since epoch in milliseconds.
          */
-        long long timestampMs;
-        double centerFreq;
+        long long timestampMs = 0;
+        double centerFreq = 0;
 
         /**
          * Attachments allow different transformations to be applied and attached to the block.
