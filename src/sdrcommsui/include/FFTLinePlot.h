@@ -9,6 +9,7 @@
 #include <atomic>
 #include <memory>
 #include <thread>
+#include <mutex>
 #include "ReceiveQueue.h"
 #include "FFTTransform.h"
 #include "sketch.h"

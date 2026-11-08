@@ -127,6 +127,21 @@ else ()
             NO_DEFAULT_PATH
     )
 
+    find_library(FFTW3_LIB
+            NAMES libfftw3.a libfftw3
+            HINTS /usr/
+            PATH_SUFFIXES lib/x86_64-linux-gnu lib/aarch64-linux-gnu lib
+            NO_DEFAULT_PATH
+            )
+
+    find_library(FFTW3F_LIB
+            NAMES libfftw3f.a libfftw3f
+            HINTS /usr/
+            PATH_SUFFIXES lib/x86_64-linux-gnu lib/aarch64-linux-gnu lib
+            NO_DEFAULT_PATH
+    )
+
+
     message(STATUS "libliquid-dsp found:")
 endif ()
 # vKFFT
@@ -223,7 +238,7 @@ target_include_directories(client_static PRIVATE ${ONNXRUNTIME_INCLUDE_DIR})
 target_link_libraries(client_static PRIVATE ${ONNX_RUNTIME_LIBRARY})
 # link with liquid-dsp
 target_include_directories(client_static PRIVATE ${LIBLIQUID_INCLUDE_DIR})
-target_link_libraries(client_static PRIVATE ${LIQUID_LIBRARY})
+
 
 if (APPLE)
     target_compile_definitions(client_static PRIVATE VKFFT_BACKEND=0)
@@ -233,11 +248,14 @@ if (APPLE)
     target_link_directories(client_static PUBLIC /opt/homebrew/lib)
 
 
+    target_link_libraries(client_static PRIVATE ${LIQUID_LIBRARY})
 else ()
     target_include_directories(client_static PUBLIC /usr/include)
     target_include_directories(client_static PUBLIC /usr/include/glslang/Include/)
 
+    target_link_libraries(client_static PRIVATE ${LIQUID_LIBRARY} ${FFTW3_LIB} ${FFTW3F_LIB} m)
 endif ()
+
 
 FetchContent_GetProperties(vkfft)
 if (vkfft_POPULATED)

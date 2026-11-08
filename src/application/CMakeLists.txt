@@ -46,8 +46,10 @@ if (APPLE)
     target_include_directories(application PRIVATE "/opt/homebrew/include/glslang/Include")
     target_link_directories(application PRIVATE /opt/homebrew/lib)
 else()
+
     target_include_directories(client_static PRIVATE /usr/include)
     target_include_directories(client_static PRIVATE /usr/include/glslang/Include/)
+
 endif ()
 # Core link layer: Always link against your static drawing engine target
 target_link_libraries(application PRIVATE client_static)
