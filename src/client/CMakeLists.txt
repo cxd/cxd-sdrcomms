@@ -255,8 +255,12 @@ if (vkfft_POPULATED)
             # -include forces the compiler to treat <cstdint> as if it were written
             # at the very top of every single source file.
             # this is to get around issues compiling SPIRV
-            target_compile_options(glslang::glslang PRIVATE-include cstdint)
-            target_compile_options(glslang::SPIRV PRIVATE-include cstdint)
+            if(TARGET SPIRV)
+                target_compile_options(SPIRV PRIVATE -include cstdint)
+            endif()
+            if(TARGET glslang)
+                target_compile_options(glslang PRIVATE -include cstdint)
+            endif()
         endif()
 
         target_compile_definitions(client_static PRIVATE VKFFT_BACKEND=0)
