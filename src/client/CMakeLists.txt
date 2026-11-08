@@ -106,7 +106,7 @@ else()
     )
     message(STATUS "mosquitto found:")
     find_path(ONNXRUNTIME_INCLUDE_DIR
-            NAMES onnxruntime_cxx_api.h
+            NAMES onnxruntime
             HINTS /usr/
             PATH_SUFFIXES include)
     # x86_64-linux-gnu/
