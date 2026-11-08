@@ -117,7 +117,7 @@ else()
     )
     message(STATUS "onnxruntime found:")
     find_path(LIBLIQUID_INCLUDE_DIR
-            NAMES liquid.h
+            NAMES liquid/liquid.h liquid.h
             HINTS /usr/
             PATH_SUFFIXES include)
     find_library(LIQUID_LIBRARY

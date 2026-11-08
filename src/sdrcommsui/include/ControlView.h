@@ -69,6 +69,13 @@ namespace sdrcommsui {
         std::shared_ptr<sdrcomms::MessageQueue<sdrcomms::ControlMessage>> outboundMessageQueue;
 
         /**
+         * format a timestamp as HH:MM:SS.sss
+         * @param ts
+         * @return
+         */
+        std::string format_ts(long long ts);
+
+        /**
          * use current settings to send the control frequency message.
          */
         void send_control_frequency_msg();

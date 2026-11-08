@@ -67,7 +67,7 @@ namespace sdrcommsui {
         ImGui::Text("Server: %s", udpServer.c_str());
         ImGui::Text("Port: %d", port);
         ImGui::Text("Render FPS: %d", fps);
-        ImGui::Text("Current Timestamp: %lld", timestampMs);
+        ImGui::Text("Current Timestamp: %s", format_ts(timestampMs).c_str());
         std::string centerFreqStr = std::to_string(centerFreq);
         //ImGui::InputText("Center Frequency Hz", centerFreqStr.c_str());
         ImGui::Text("Center Frequency: %f", centerFreq);
@@ -75,7 +75,7 @@ namespace sdrcommsui {
         bool scanModified = ImGui::Checkbox("Scan Frequency Automatically", &scanFrequency);
 
         if (classLabel.length() > 0 && confidence > 0) {
-            ImGui::Text("Class Timestamp: %lld", classTimestampMs);
+            ImGui::Text("Class Timestamp: %s", format_ts(classTimestampMs).c_str());
             ImGui::Text("Modulation Class: %s", classLabel.c_str());
             ImGui::Text("Classification Confidence: %f", confidence);
         } else {
@@ -93,6 +93,26 @@ namespace sdrcommsui {
             send_control_frequency_msg();
         }
     }
+
+    /**
+         * format a timestamp as HH:MM:SS.sss
+         * @param ts
+         * @return
+         */
+    std::string ControlView::format_ts(long long ts) {
+        if (ts == 0) {
+            return "0";
+        }
+        std::chrono::milliseconds ms_duration(ts);
+        auto seconds = std::chrono::duration_cast<std::chrono::seconds>(ms_duration);
+        std::time_t time_sec = seconds.count();
+        long long remaining_ms = (ms_duration - seconds).count();
+        std::tm* time_info = std::localtime(&time_sec);
+        std::ostringstream oss;
+        oss << std::put_time(time_info, "%H:%M:%S") << "." << std::setfill('0') << std::setw(3) << remaining_ms;
+        return oss.str();
+    }
+
 
     /**
          * use current settings to send the control frequency message.
