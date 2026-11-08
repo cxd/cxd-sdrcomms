@@ -136,7 +136,7 @@ namespace sdrcommsui {
     }
 
 
-    void ControlView::receive_inbound_messages() {
+    void ControlView::receive_stream() {
         while (isRunning.load(std::memory_order_relaxed)) {
             sdrcomms::IQBlock block;
             if (receiveQueue->pop(block)) {
@@ -147,7 +147,7 @@ namespace sdrcommsui {
         }
     }
 
-    void ControlView::receive_stream() {
+    void ControlView::receive_inbound_messages() {
         while (isRunning.load(std::memory_order_relaxed)) {
             sdrcomms::ControlMessage msg;
             if (inboundMessageQueue->pop(msg)) {

@@ -67,7 +67,7 @@ namespace sdrcomms {
         uint32_t chunk_index;
         BinaryIO::read_pod(in, chunk_index);
         size_t total_bytes;
-        uint64_t temp_bytes;
+        uint64_t temp_bytes = 0;
         BinaryIO::read_pod(in, temp_bytes);
         total_bytes = static_cast<size_t>(temp_bytes);
         if (chunk_index == 0) {
