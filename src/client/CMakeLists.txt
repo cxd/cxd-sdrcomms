@@ -69,7 +69,7 @@ if (APPLE)
             NAMES mosquitto
             HINTS ${HOMEBREW_HINTS}
             PATH_SUFFIXES lib
-            )
+    )
     message(STATUS "mosquitto found:")
     find_path(ONNXRUNTIME_INCLUDE_DIR
             NAMES onnxruntime
@@ -94,7 +94,7 @@ if (APPLE)
     )
     message(STATUS "libliquid-dsp found:")
 
-else()
+else ()
     find_path(MOSQUITTO_INCLUDE_DIR
             NAMES mosquitto.h
             HINTS /usr/
@@ -123,11 +123,12 @@ else()
     find_library(LIQUID_LIBRARY
             NAMES libliquid.a liquid
             HINTS /usr/
-            PATH_SUFFIXES lib
+            PATH_SUFFIXES lib/x86_64-linux-gnu lib/aarch64-linux-gnu lib
             NO_DEFAULT_PATH
     )
+
     message(STATUS "libliquid-dsp found:")
-endif()
+endif ()
 # vKFFT
 FetchContent_Declare(
         vkfft
@@ -135,9 +136,9 @@ FetchContent_Declare(
         GIT_TAG v1.3.4
 )
 FetchContent_MakeAvailable(vkfft)
-if(APPLE)
+if (APPLE)
     target_compile_definitions(VkFFT INTERFACE VKFFT_BACKEND=0)
-endif()
+endif ()
 
 # Json library
 
@@ -232,7 +233,7 @@ if (APPLE)
     target_link_directories(client_static PUBLIC /opt/homebrew/lib)
 
 
-else()
+else ()
     target_include_directories(client_static PUBLIC /usr/include)
     target_include_directories(client_static PUBLIC /usr/include/glslang/Include/)
 
@@ -258,10 +259,9 @@ if (vkfft_POPULATED)
     target_link_libraries(client_static PUBLIC
             glslang::glslang
             glslang::SPIRV
-   )
+    )
 
 endif ()
-
 
 
 target_link_libraries(client_static PUBLIC nlohmann_json::nlohmann_json)
