@@ -67,11 +67,12 @@ namespace sdrcommsui {
         ImGui::Text("Server: %s", udpServer.c_str());
         ImGui::Text("Port: %d", port);
         ImGui::Text("Render FPS: %d", fps);
+        ImGui::Text("Current Timestamp: %lld", timestampMs);
         std::string centerFreqStr = std::to_string(centerFreq);
         //ImGui::InputText("Center Frequency Hz", centerFreqStr.c_str());
         ImGui::Text("Center Frequency: %f", centerFreq);
         bool scanFrequency = autoScan;
-        bool newScanFlag = ImGui::Checkbox("Scan Frequency Automatically", &scanFrequency);
+        bool scanModified = ImGui::Checkbox("Scan Frequency Automatically", &scanFrequency);
 
         if (classLabel.length() > 0 && confidence > 0) {
             ImGui::Text("Class Timestamp: %lld", classTimestampMs);
@@ -84,10 +85,10 @@ namespace sdrcommsui {
             ImGui::Text("Classification Confidence: %f", 0);
         }
         // check if the autoScan setting has changed from true to false.
-        if (!newScanFlag && autoScan) {
+        if (scanModified && !scanFrequency && autoScan) {
             autoScan = false;
             send_control_frequency_msg();
-        } else if (newScanFlag && !autoScan) {
+        } else if (scanModified && scanFrequency && !autoScan) {
             autoScan = true;
             send_control_frequency_msg();
         }
@@ -138,7 +139,7 @@ namespace sdrcommsui {
                     classTimestampMs = msg.timestampMs;
                     std::cout << "ControlView::classification: " << msg.message_type_to_string() <<
                             " Class: " << classLabel <<
-                            "Confidence: " << confidence << std::endl;
+                            " Confidence: " << confidence << std::endl;
                 }
             }
         }

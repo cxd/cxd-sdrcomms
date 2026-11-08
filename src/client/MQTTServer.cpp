@@ -157,7 +157,7 @@ namespace sdrcomms {
         // convert the message into the message type and
         // write the message into the queue.
         ControlMessage msg;
-        if (!ControlMessage::parseMQTTMessage(msg, message)) {
+        if (!ControlMessage::parseCBORMessage(msg, message)) {
             std::this_thread::yield();
             return;
         }

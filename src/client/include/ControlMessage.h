@@ -38,13 +38,33 @@ namespace sdrcomms {
          */
         long long timestampMs = 0;
 
-        static bool parseMQTTMessage(ControlMessage &msg, const struct mosquitto_message* message) {
+        static bool parseJSONMessage(ControlMessage &msg, const struct mosquitto_message* message) {
             if (message->payload == nullptr) {
                 return false;
             }
             try {
                 const uint8_t* raw = static_cast<const uint8_t*>(message->payload);
                 json j = json::parse(raw);
+                msg.type = static_cast<MessageType>(j["type"].get<int>());
+                msg.result = static_cast<MessageResult>(j["result"].get<int>());
+                msg.freq = j["freq"].get<double>();
+                msg.classLabel = j["classLabel"].get<std::string>();
+                msg.confidence = j["confidence"].get<float>();
+                msg.channel = j["channel"].get<int>();
+                msg.timestampMs = j["timestampMs"].get<long long>();
+                return true;
+            }  catch (std::exception ex) {
+                return false;
+            }
+        }
+
+        static bool parseCBORMessage(ControlMessage &msg, const struct mosquitto_message* message) {
+            if (message->payload == nullptr) {
+                return false;
+            }
+            try {
+                const uint8_t* raw = static_cast<const uint8_t*>(message->payload);
+                json j = json::from_cbor(raw, raw + message->payloadlen);
                 msg.type = static_cast<MessageType>(j["type"].get<int>());
                 msg.result = static_cast<MessageResult>(j["result"].get<int>());
                 msg.freq = j["freq"].get<double>();
