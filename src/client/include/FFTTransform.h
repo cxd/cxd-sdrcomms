@@ -65,6 +65,10 @@ namespace sdrcomms {
         VkCommandBuffer commandBuffer;
         VkFence fence;
 
+        // storage buffer for fft input output
+        VkBuffer *inputOutputBuffers;
+        VkDeviceSize buffer_size;
+
         VkFFTApplication fftApp {};
         VkFFTConfiguration fftConfig {};
 

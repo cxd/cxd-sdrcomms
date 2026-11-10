@@ -59,25 +59,30 @@ namespace sdrcommsui {
      * @param fps
      */
     void FFTLinePlot::DrawSketch(SDL_Renderer *renderer, int width, int height, int timestep, int frame, int fps) {
-        std::shared_lock<std::shared_mutex> lock(this->updateMutex);
 
-        if (this->spectrum.size() == 0) {
-            return;
+        std::vector<float> spectrumCopy;
+        {
+            std::shared_lock<std::shared_mutex> lock(this->updateMutex);
+
+            if (this->spectrum.size() == 0) {
+                return;
+            }
+            spectrumCopy = this->spectrum;
         }
         SDL_RenderClear(renderer);
         // draw fft points.
 
         // we need to downsample by skipping the stride length
         std::vector<SDL_Point> points (width);
-        float stride = static_cast<float>(this->spectrum.size()) / static_cast<float>(width);
+        float stride = static_cast<float>(spectrumCopy.size()) / static_cast<float>(width);
         for (int x=0; x<width; x++) {
 
             size_t idx = static_cast<size_t>(x*stride);
-            if (idx > this->spectrum.size()) {
+            if (idx > spectrumCopy.size()) {
                 break;
             }
             // a value between 0.0 and 1.0
-            float fft_val = spectrum[idx];
+            float fft_val = spectrumCopy[idx];
 
             if (!std::isfinite(fft_val)) {
                 fft_val = 0.0f;
@@ -92,7 +97,7 @@ namespace sdrcommsui {
         }
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_RenderDrawLines(renderer, points.data(), points.size());
-        lock.unlock();
+
     }
 
     /**

@@ -55,14 +55,17 @@ namespace sdrcommsui {
      */
     void SpectrumWaterfall::DrawSketch(SDL_Renderer *renderer, int width, int height,
                                        int timestep, int frame, int fps) {
-        std::shared_lock<std::shared_mutex> lock(this->updateMutex);
 
-        if (this->spectrum.size() < this->MAX_QUEUE_SIZE) {
-            return;
+        std::vector<std::vector<float>> averages;
+        {
+            std::shared_lock<std::shared_mutex> lock(this->updateMutex);
+
+            if (this->spectrum.size() < this->MAX_QUEUE_SIZE) {
+                return;
+            }
+            std::vector<std::vector<float>> averages = this->spectrum;
         }
-        std::vector<std::vector<float>> averages{this->spectrum.begin(), this->spectrum.end()};
         this->draw_blocks(renderer, averages);
-
     }
 
     /**

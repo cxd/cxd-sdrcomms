@@ -93,6 +93,44 @@ namespace sdrcomms {
             nullptr,
             nullptr
         };
+        // initialise device portability enumeration.
+        uint32_t extensionCount = 0;
+        std::vector<VkExtensionProperties> availableExtensions;
+
+        VkResult result;
+        do {
+            result = vkEnumerateDeviceExtensionProperties(
+                physicalDevice, nullptr, &extensionCount, nullptr);
+            if (result != VK_SUCCESS) {
+                return false;
+            }
+
+            availableExtensions.resize(extensionCount);
+            result = vkEnumerateDeviceExtensionProperties(
+                physicalDevice, nullptr, &extensionCount,
+                availableExtensions.data());
+        } while (result == VK_INCOMPLETE);
+
+        if (result != VK_SUCCESS) {
+            return false;
+        }
+        availableExtensions.resize(extensionCount);
+
+        std::vector<const char*> enabledExtensions;
+        for (const auto& extension : availableExtensions) {
+            if (std::strcmp(extension.extensionName,
+                            "VK_KHR_portability_subset") == 0) {
+                enabledExtensions.push_back("VK_KHR_portability_subset");
+                break;
+                            }
+        }
+
+        deviceInfo.enabledExtensionCount =
+            static_cast<uint32_t>(enabledExtensions.size());
+        deviceInfo.ppEnabledExtensionNames =
+            enabledExtensions.empty() ? nullptr : enabledExtensions.data();
+
+
         if (vkCreateDevice(physicalDevice, &deviceInfo, nullptr, &device) != VK_SUCCESS) {
             return false;
         }
@@ -173,9 +211,9 @@ namespace sdrcomms {
 
 
         // assign buffer
-        VkBuffer *inputOutputBuffers = {&deviceBuffer};
+        inputOutputBuffers = {&deviceBuffer};
         fftConfig.buffer = inputOutputBuffers;
-        VkDeviceSize buffer_size = fftSize * sizeof(float);
+        buffer_size = fftSize * sizeof(std::complex<float>);
         fftConfig.bufferSize = &buffer_size;
         // init application
         VkFFTResult res = initializeVkFFT(&fftApp, fftConfig);

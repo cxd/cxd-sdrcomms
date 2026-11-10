@@ -64,21 +64,32 @@ namespace sdrcommsui {
         */
     void ControlView::DrawSketch(SDL_Renderer *renderer, int width, int height, int timestep, int frame, int fps) {
         // draw ImGui Controls.
-        std::shared_lock<std::shared_mutex> lock(this->updateMutex);
+        std::string currentTs, currentClassTs, currentLabel = "";
+        double currentFreq, currentConfidence = 0;
+        {
+            std::shared_lock<std::shared_mutex> lock(this->updateMutex);
+            currentFreq = centerFreq;
+            currentTs = format_ts(timestampMs);
+            if (classLabel.length() > 0 && confidence > 0) {
+                currentClassTs = format_ts(classTimestampMs);
+                currentConfidence = confidence;
+                currentLabel = classLabel;
+            }
+        }
         ImGui::Text("Server: %s", udpServer.c_str());
         ImGui::Text("Port: %d", port);
         ImGui::Text("Render FPS: %d", fps);
-        ImGui::Text("Current Timestamp: %s", format_ts(timestampMs).c_str());
-        std::string centerFreqStr = std::to_string(centerFreq);
+        ImGui::Text("Current Timestamp: %s", currentTs.c_str());
+        std::string centerFreqStr = std::to_string(currentFreq);
         //ImGui::InputText("Center Frequency Hz", centerFreqStr.c_str());
-        ImGui::Text("Center Frequency: %f", centerFreq);
+        ImGui::Text("Center Frequency: %f", currentFreq);
         bool scanFrequency = autoScan;
         bool scanModified = ImGui::Checkbox("Scan Frequency Automatically", &scanFrequency);
 
-        if (classLabel.length() > 0 && confidence > 0) {
-            ImGui::Text("Class Timestamp: %s", format_ts(classTimestampMs).c_str());
-            ImGui::Text("Modulation Class: %s", classLabel.c_str());
-            ImGui::Text("Classification Confidence: %f", confidence);
+        if (currentLabel.length() > 0 && currentConfidence > 0) {
+            ImGui::Text("Class Timestamp: %s", currentClassTs.c_str());
+            ImGui::Text("Modulation Class: %s", currentLabel.c_str());
+            ImGui::Text("Classification Confidence: %f", currentConfidence);
         } else {
             ImGui::Text("Class Timestamp: %lld", 0);
             std::string emptyStr = "";
