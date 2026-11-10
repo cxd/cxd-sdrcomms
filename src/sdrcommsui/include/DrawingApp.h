@@ -90,6 +90,11 @@ namespace drawing {
 
         std::chrono::steady_clock::time_point lastSecond;
         std::chrono::steady_clock::time_point lastTimeStep;
+
+        /**
+         * print out which renderer is being used by the UI
+         */
+        void debug_active_renderer(SDL_Renderer *renderer);
     };
 } // drawing
 

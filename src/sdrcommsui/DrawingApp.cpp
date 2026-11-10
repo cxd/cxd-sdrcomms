@@ -84,6 +84,7 @@ namespace drawing {
         } else {
             std::cout << "Using hardware renderer" << std::endl;
         }
+        debug_active_renderer(renderer);
 
         SDL_GetWindowSize(window, &width, &height);
         SDL_SetWindowSize(window, width, height);
@@ -212,5 +213,26 @@ namespace drawing {
 
         sketch->DrawSketch(renderer, width, height, TimeStep, Frame, Fps);
         SDL_RenderSetViewport(renderer, NULL);
+    }
+
+
+    /**
+     * print out which renderer is being used by the UI
+     */
+    void DrawingApp::debug_active_renderer(SDL_Renderer *renderer) {
+        SDL_RendererInfo info;
+        if (SDL_GetRendererInfo(renderer, &info) == 0) {
+            std::cout << "Renderer: " << info.name << std::endl;
+            std::cout << "Max texture width: " << info.max_texture_width << std::endl;
+            std::cout << "Max texture height: " << info.max_texture_height << std::endl;
+            std::cout << "Max texture count: " << info.num_texture_formats << std::endl;
+            if (info.flags & SDL_RENDERER_ACCELERATED) {
+                std::cout << "Renderer is accelerated" << std::endl;
+            } else {
+                std::cout << "Renderer is using software fallback" << std::endl;
+            }
+        } else {
+            std::cerr << "Cannot get renderer info" << std::endl;
+        }
     }
 } // drawing
