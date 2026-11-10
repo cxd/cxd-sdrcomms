@@ -37,6 +37,7 @@ namespace sdrcommsui {
             [this]() {
                 this->receive_inbound_messages();
             });
+        return true;
     }
 
     /**
