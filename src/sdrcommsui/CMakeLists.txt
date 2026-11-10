@@ -108,17 +108,7 @@ set_target_properties(sdrcommsui PROPERTIES
 # ==============================================================================
 # SDL2 CONFIGURATION SPLIT
 # ==============================================================================
-if (EMSCRIPTEN)
-    # --------------------------------------------------------------------------
-    # TARGET: WebAssembly (Emscripten Browser App)
-    # Use Emscripten's built-in system SDL2 ports cache
-    # --------------------------------------------------------------------------
-    message(STATUS "🌐 TARGET: WebAssembly -> Routing via Emscripten system ports")
-
-    # Instruct Emscripten to inject the native browser ports definition
-    target_compile_options(sdrcommsui PUBLIC "-sUSE_SDL=2")
-
-elseif (NOT APPLE AND (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64") AND NOT CMAKE_CROSSCOMPILING)
+if (NOT APPLE AND (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64") AND NOT CMAKE_CROSSCOMPILING)
     # --------------------------------------------------------------------------
     # TARGET: Linux AMD64 Native Desktop
     # Use the system-deployed static libSDL2.a instead of building from source
@@ -190,4 +180,21 @@ else ()
     target_include_directories(sdrcommsui PUBLIC ${sdl2_SOURCE_DIR}/include)
 endif ()
 
+
+# Apply flags safely for GCC and Clang across Linux and macOS
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    set(SANITIZER_FLAGS
+            "-fsanitize=address,undefined"
+            "-fno-sanitize-recover=undefined"
+            "-fno-omit-frame-pointer"
+    )
+
+    target_compile_options(sdrcommsui PRIVATE ${SANITIZER_FLAGS})
+    target_link_options(sdrcommsui PRIVATE ${SANITIZER_FLAGS})
+
+    # macOS specific: ensure debug symbols are explicitly kept
+    if (APPLE)
+        target_compile_options(sdrcommsui PRIVATE "-gmodules")
+    endif()
+endif()
 

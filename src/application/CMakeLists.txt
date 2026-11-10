@@ -38,6 +38,22 @@ set_target_properties(application PROPERTIES
         POSITION_INDEPENDENT_CODE 1
 )
 
+# Apply flags safely for GCC and Clang across Linux and macOS
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    set(SANITIZER_FLAGS
+            "-fsanitize=address,undefined"
+            "-fno-sanitize-recover=undefined"
+            "-fno-omit-frame-pointer"
+    )
+
+    target_compile_options(application PRIVATE ${SANITIZER_FLAGS})
+    target_link_options(application PRIVATE ${SANITIZER_FLAGS})
+
+    # macOS specific: ensure debug symbols are explicitly kept
+    if (APPLE)
+        target_compile_options(application PRIVATE "-gmodules")
+    endif()
+endif()
 
 if (APPLE)
     target_compile_definitions(application PRIVATE VKFFT_BACKEND=0)

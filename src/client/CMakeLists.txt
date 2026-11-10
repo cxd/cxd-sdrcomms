@@ -314,6 +314,24 @@ else ()
 endif ()
 
 
+# Apply flags safely for GCC and Clang across Linux and macOS
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    set(SANITIZER_FLAGS
+            "-fsanitize=address,undefined"
+            "-fno-sanitize-recover=undefined"
+            "-fno-omit-frame-pointer"
+    )
+
+    target_compile_options(client_static PRIVATE ${SANITIZER_FLAGS})
+    target_link_options(client_static PRIVATE ${SANITIZER_FLAGS})
+
+    # macOS specific: ensure debug symbols are explicitly kept
+    if (APPLE)
+        target_compile_options(client_static PRIVATE "-gmodules")
+    endif()
+endif()
+
+
 # ==============================================================================
 # GENERAL INCLUDE DIRECTORIES
 # ==============================================================================
