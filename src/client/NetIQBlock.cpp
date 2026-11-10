@@ -3,6 +3,8 @@
 //
 
 #include "include/NetIQBlock.h"
+
+#include "constants.h"
 #include "include/BinaryIO.h"
 
 namespace sdrcomms {
@@ -55,8 +57,8 @@ namespace sdrcomms {
         BinaryIO::write_pod(out, this->centerFreq);
         BinaryIO::write_pod(out, this->sample_size);
         // num samples
-        size_t numSamples = this->iqValues.size();
-        this->num_samples = numSamples;
+        const uint64_t numSamples = this->iqValues.size();
+        this->num_samples = static_cast<size_t>(numSamples);
         BinaryIO::write_pod(out, numSamples);
         for (auto sample: this->iqValues) {
             sample.serialize(out);
@@ -86,9 +88,13 @@ namespace sdrcomms {
         block.centerFreq = centerFreq;
         block.channel = channel;
         // the number of samples to read.
-        size_t numsamples;
+        uint64_t numsamples = 0;
         BinaryIO::read_pod(in, numsamples);
-        block.num_samples = numsamples;
+        // as a precaution we will not allow samples larger than our default.
+        if (numsamples > REQUIRED_SAMPLES) {
+            throw std::runtime_error("Too many samples, cannot deserialize block.");
+        }
+        block.num_samples = static_cast<size_t>(numsamples);
         block.iqValues.resize(numsamples);
         for (size_t i = 0; i < numsamples; i++) {
             const IQValue sample = IQValue::deserialize(in);

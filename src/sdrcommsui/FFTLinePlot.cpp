@@ -159,7 +159,12 @@ namespace sdrcommsui {
                 if (block.samples.size() == 0) {
                     continue;
                 }
-                std::vector<std::complex<float> > fftOut = this->fft->fft(block.samples);
+                std::vector<std::complex<float> > fftOut;
+                try {
+                    fftOut = this->fft->fft(block.samples);
+                } catch (std::exception) {
+                    continue;
+                }
                 // write lock block readers
                 std::unique_lock<std::shared_mutex> lock(this->updateMutex);
 

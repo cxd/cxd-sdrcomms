@@ -63,7 +63,7 @@ namespace sdrcommsui {
             if (this->spectrum.size() < this->MAX_QUEUE_SIZE) {
                 return;
             }
-            std::vector<std::vector<float>> averages = this->spectrum;
+            averages = this->spectrum;
         }
         this->draw_blocks(renderer, averages);
     }
@@ -74,9 +74,9 @@ namespace sdrcommsui {
      * @param averages
      */
     void SpectrumWaterfall::draw_blocks(SDL_Renderer *renderer, std::vector<std::vector<float>> averages) {
-
-        int y_block_size = height / averages.size();
-        int y_pos = 0;
+        if (averages.size() == 0) {
+            return;
+        }
 
         auto [min, max] = this->get_min_max(averages);
         size_t num_rows = std::min(averages.size(), this->MAX_QUEUE_SIZE);
@@ -221,7 +221,12 @@ namespace sdrcommsui {
                 if (block.samples.size() == 0) {
                     continue;
                 }
-                std::vector<std::complex<float> > fftOut = this->fft->fft(block.samples);
+                std::vector<std::complex<float> > fftOut;
+                try {
+                    fftOut = this->fft->fft(block.samples);
+                } catch (std::exception) {
+                    continue;
+                }
                 // write lock block readers
                 std::unique_lock<std::shared_mutex> lock(this->updateMutex);
 
