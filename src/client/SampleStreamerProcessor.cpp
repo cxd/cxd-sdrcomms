@@ -173,10 +173,11 @@ namespace sdrcomms {
                 std::this_thread::yield();
                 continue;
             }
-            auto snapshot = std::atomic_load(&active_clients);
-            auto copy_active = *snapshot;
+
             IQBlock block{required_samples};
             if (receiveQueue->pop(block)) {
+                auto snapshot = std::atomic_load(&active_clients);
+                auto copy_active = *snapshot;
                 // stream data to clients.
                 // serialize the block.
                 NetIQBlock netBlock{block};
