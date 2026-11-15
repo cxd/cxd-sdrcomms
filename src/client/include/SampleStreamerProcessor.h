@@ -18,7 +18,7 @@ namespace sdrcomms {
         sockaddr_in address;
         std::chrono::time_point<std::chrono::steady_clock> heartbeat;
 
-        NetClient(sockaddr_in address, std::chrono::time_point<std::chrono::steady_clock>) {
+        NetClient(sockaddr_in address, std::chrono::time_point<std::chrono::steady_clock> heartbeat) {
             this->address = address;
             this->heartbeat = heartbeat;
         }
