@@ -137,6 +137,7 @@ namespace sdrcomms {
             }
             recv_buffer[recv_len] = '\0';
             std::string command(recv_buffer);
+            bool updatedClients = false;
             if (command == "REG") {
                 // add a client.
                 std::cout << "REG command received from " << inet_ntoa(client_addr.sin_addr) << ":" << ntohs(
@@ -144,16 +145,19 @@ namespace sdrcomms {
                 NetClient client{client_addr, std::chrono::steady_clock::now()};
                 auto it = std::find(copy_active.begin(), copy_active.end(), client);
                 if (it == copy_active.end()) {
+                    client.heartbeat = std::chrono::steady_clock::now();
                     copy_active.push_back(client);
                     // store changes
                     auto updated = std::make_shared<std::vector<NetClient>>(copy_active);
                     std::atomic_store(&active_clients, updated);
+                    updatedClients = true;
                 } else {
                     // existing client.
                     it->heartbeat = std::chrono::steady_clock::now();
                     // store changes
                     auto updated = std::make_shared<std::vector<NetClient>>(copy_active);
                     std::atomic_store(&active_clients, updated);
+                    updatedClients = true;
                 }
 
             } else if (command == "CLOSE" || command == "UNREG") {
@@ -161,8 +165,12 @@ namespace sdrcomms {
                     client_addr.sin_port) << std::endl;
                 NetClient client{client_addr, std::chrono::steady_clock::now()};
                 remove_client(client);
+                updatedClients = true;
             }
-            cleanup_expired_clients();
+            // only perform cleanup if no changes were made.
+            if (!updatedClients) {
+                cleanup_expired_clients();
+            }
         }
         // linux or osx
         ::close(server_socket);
