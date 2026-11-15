@@ -7,37 +7,39 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install native ARM64 build tools and libraries
 # Because the container is natively ARM64, 'apt install' fetches the exact
 # arm64 versions of Boost and SDL2 automatically without any multiarch headaches!
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    clang \
-    cmake \
-    libsdl2-dev \
-    libboost-program-options-dev \
-    libsamplerate0-dev \
-    # Bare-metal display driver dependencies for KMS/DRM
-    libdrm-dev \
-    libgbm-dev \
-    # Embedded mobile GPU rendering layers for Mali chips
-    libgles2-mesa-dev \
-    libegl1-mesa-dev \
-    libusb-dev \
-    libiio0 \
-    libiio-dev \
-    libiio-utils \
-    libad9361-0 \
-    libad9361-dev \
-    libavahi-core-dev \
-    git \
-    libvulkan-dev \
-    vulkan-tools \
-    glslang-dev \
-    glslang-tools \
-    glslc \
-    mosquitto-dev libmosquitto-dev \
-    libonnxruntime-dev libonnxruntime-providers \
-    libliquid-dev \
-    libfftw3-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update
+RUN apt-get install -y \
+build-essential \
+clang \
+cmake \
+libsdl2-dev \
+libboost-program-options-dev \
+libsamplerate0-dev \
+libdrm-dev \
+libgbm-dev \
+libgles2-mesa-dev \
+libegl1-mesa-dev \
+libusb-dev \
+libiio0 \
+libiio-dev \
+libiio-utils \
+libad9361-0 \
+libad9361-dev \
+libavahi-core-dev \
+git
+
+RUN apt-get install -y libvulkan-dev \
+vulkan-tools \
+glslang-dev \
+glslang-tools \
+glslc \
+mosquitto-dev \
+libmosquitto-dev \
+libonnxruntime-dev libonnxruntime-providers \
+libliquid-dev \
+libfftw3-dev
+
+RUN rm -rf /var/lib/apt/lists/*
 
 # Set the inner container context path
 WORKDIR /workspace
