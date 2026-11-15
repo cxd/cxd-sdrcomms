@@ -145,13 +145,17 @@ namespace sdrcomms {
                 auto it = std::find(copy_active.begin(), copy_active.end(), client);
                 if (it == copy_active.end()) {
                     copy_active.push_back(client);
+                    // store changes
+                    auto updated = std::make_shared<std::vector<NetClient>>(copy_active);
+                    std::atomic_store(&active_clients, updated);
                 } else {
                     // existing client.
                     it->heartbeat = std::chrono::steady_clock::now();
+                    // store changes
+                    auto updated = std::make_shared<std::vector<NetClient>>(copy_active);
+                    std::atomic_store(&active_clients, updated);
                 }
-                // store changes
-                auto updated = std::make_shared<std::vector<NetClient>>(copy_active);
-                std::atomic_store(&active_clients, updated);
+
             } else if (command == "CLOSE" || command == "UNREG") {
                 std::cout << "UNREG command received from " << inet_ntoa(client_addr.sin_addr) << ":" << ntohs(
                     client_addr.sin_port) << std::endl;
