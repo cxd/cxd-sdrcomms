@@ -60,7 +60,7 @@ namespace sdrcomms {
         std::shared_ptr<ReceiveQueue> receiveQueue;
 
         // registered clients
-        std::shared_ptr<std::vector<NetClient> > active_clients { std::make_shared<std::vector<NetClient>> () };
+        std::shared_ptr< std::vector<NetClient> > active_clients { std::make_shared<std::vector<NetClient>>() };
 
 
         std::thread client_thread;
