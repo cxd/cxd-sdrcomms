@@ -148,7 +148,6 @@ namespace sdrcomms {
                 } else {
                     // existing client.
                     it->heartbeat = std::chrono::steady_clock::now();
-                    std::atomic_store(&active_clients, copy_active);
                 }
             } else if (command == "CLOSE" || command == "UNREG") {
                 std::cout << "UNREG command received from " << inet_ntoa(client_addr.sin_addr) << ":" << ntohs(
