@@ -65,14 +65,17 @@ namespace sdrcommsui {
         {
             std::shared_lock<std::shared_mutex> lock(this->updateMutex);
 
-            if (this->spectrum.size() < this->MAX_QUEUE_SIZE) {
-                return;
-            }
+
             averages = this->spectrum;
             frequencies = this->avgFrequenciesHz;
         }
-        this->draw_blocks(renderer, averages);
-        this->draw_frequencies(renderer, frequencies);
+        if (averages.size() >= this->MAX_QUEUE_SIZE) {
+            this->draw_blocks(renderer, averages);
+        }
+        if (frequencies.size() > 0) {
+            this->draw_frequencies(renderer, frequencies);
+        }
+
     }
 
     /**
@@ -179,9 +182,9 @@ namespace sdrcommsui {
             float x = (left + right)/2;
             SDL_RenderDrawLine(renderer, x, top, x, top + 5);
 
-            if (i % LABEL_TICK_STEP) {
+            if (i % LABEL_TICK_STEP == 0) {
                 // draw text.
-                std::string value = std::format("{:.2f}", frequencies[i]/divider);
+                std::string value = std::format("{:.5f}", frequencies[i]/divider);
                 stringRGBA(renderer, x, top + LABEL_TICK_OFFSET, value.c_str(), 255, 255, 255, 255);
             }
 

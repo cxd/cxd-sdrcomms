@@ -68,7 +68,7 @@ namespace sdrcommsui {
         const int TICK_HEIGHT = 5;
         const int TICK_STEP = 4;
         const int LABEL_TICK_OFFSET = 10;
-        const int LABEL_TICK_STEP = 10;
+        const int LABEL_TICK_STEP = 40;
         const int LABEL_TICK_TITLE_OFFSET = 30;
         /**
          * display block width in pixels
