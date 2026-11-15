@@ -17,6 +17,14 @@ namespace sdrcomms {
     struct NetClient {
         sockaddr_in address;
         std::chrono::time_point<std::chrono::steady_clock> heartbeat;
+
+        NetClient(sockaddr_in address, std::chrono::time_point<std::chrono::steady_clock>) {
+            this->address = address;
+            this->heartbeat = heartbeat;
+        }
+
+        NetClient(const NetClient& other) = default;
+
         // compare two clients.
         bool operator==(const NetClient& other) const {
             return address.sin_addr.s_addr == other.address.sin_addr.s_addr &&

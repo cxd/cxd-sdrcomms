@@ -106,11 +106,12 @@ namespace sdrcomms {
     void SampleStreamerProcessor::handle_client_connections() {
         while (running.load(std::memory_order_acquire)) {
             // if adding a client.
-            auto copy_active = std::atomic_load(&active_clients);
-            if (copy_active == nullptr) {
+            auto snapshot = std::atomic_load(&active_clients);
+            if (snapshot == nullptr) {
                 std::this_thread::yield();
                 continue;
             }
+            auto copy_active = *snapshot;
             char recv_buffer[128];
             sockaddr_in client_addr{};
             std::memset(&client_addr, 0, sizeof(client_addr));
@@ -141,18 +142,19 @@ namespace sdrcomms {
                 std::cout << "REG command received from " << inet_ntoa(client_addr.sin_addr) << ":" << ntohs(
                     client_addr.sin_port) << std::endl;
                 NetClient client{client_addr, std::chrono::steady_clock::now()};
-                auto it = std::find(copy_active->begin(), copy_active->end(), client);
-                if (it == copy_active->end()) {
-                    copy_active->push_back(client);
-                    std::atomic_store(&active_clients, copy_active);
+                auto it = std::find(copy_active.begin(), copy_active.end(), client);
+                if (it == copy_active.end()) {
+                    copy_active.push_back(client);
                 } else {
                     // existing client.
                     it->heartbeat = std::chrono::steady_clock::now();
                 }
+                // store changes
+                auto updated = std::make_shared<std::vector<NetClient>>(copy_active);
+                std::atomic_store(&active_clients, updated);
             } else if (command == "CLOSE" || command == "UNREG") {
                 std::cout << "UNREG command received from " << inet_ntoa(client_addr.sin_addr) << ":" << ntohs(
                     client_addr.sin_port) << std::endl;
-
                 NetClient client{client_addr, std::chrono::steady_clock::now()};
                 remove_client(client);
             }
@@ -171,7 +173,8 @@ namespace sdrcomms {
                 std::this_thread::yield();
                 continue;
             }
-            auto copy_active = std::atomic_load(&active_clients);
+            auto snapshot = std::atomic_load(&active_clients);
+            auto copy_active = *snapshot;
             IQBlock block{required_samples};
             if (receiveQueue->pop(block)) {
                 // stream data to clients.
@@ -185,7 +188,7 @@ namespace sdrcomms {
                 std::string bytes = oss.str();
 
                 // break the data into chunks.
-                for (auto client: *copy_active) {
+                for (auto client: copy_active) {
                     // stream data to client.
                     // example of streaming a struct ie: IQSample. struct IQSample { int16_t i; int16_t q; };
                     // with packet buffer vector std::vector<IQSample> packet_buffer(PACKET_SAMPLES);
@@ -237,8 +240,9 @@ namespace sdrcomms {
         std::shared_ptr<std::vector<NetClient> > new_clients{std::make_shared<std::vector<NetClient> >()};
         // find the clients that are not expired.
         auto now = std::chrono::steady_clock::now();
-        auto copy_active = std::atomic_load(&active_clients);
-        for (auto client: *copy_active) {
+        auto snapshot = std::atomic_load(&active_clients);
+        auto copy_active = *snapshot;
+        for (auto client: copy_active) {
             auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - client.heartbeat).count();
             if (delta < UDP_CLIENT_STREAM_TIMEOUT * 1000) {
                 new_clients->push_back(client);
@@ -252,11 +256,12 @@ namespace sdrcomms {
         if (active_clients == nullptr || active_clients->empty()) {
             return;
         }
-        auto copy_active = std::atomic_load(&active_clients);
-        auto it = std::find(copy_active->begin(), copy_active->end(), client);
-        if (it != copy_active->end()) {
-            copy_active->erase(it);
+        auto snapshot = std::atomic_load(&active_clients);
+        auto copy_active = *snapshot;
+        auto it = std::find(copy_active.begin(), copy_active.end(), client);
+        if (it != copy_active.end()) {
+            copy_active.erase(it);
         }
-        std::atomic_store(&active_clients, copy_active);
+        std::atomic_store(&active_clients, std::make_shared<std::vector<NetClient>>(copy_active));
     }
 } // sdrcomms
