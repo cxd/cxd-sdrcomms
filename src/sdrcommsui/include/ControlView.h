@@ -54,7 +54,8 @@ namespace sdrcommsui {
         long long classTimestampMs = 0;
         std::string classLabel = "";
         double confidence = 0;
-
+        int blocksPerSecond = 0;
+        int tempBlockCount = 0;
 
         std::atomic<bool> isInit;
         std::atomic<bool> isRunning;
@@ -62,6 +63,9 @@ namespace sdrcommsui {
         std::thread receive_thread;
 
         std::thread inbound_msg_thread;
+
+        //  last second for computing number of blocks per second.
+        std::chrono::steady_clock::time_point lastSecond;
 
         std::shared_ptr<sdrcomms::ReceiveQueue> receiveQueue;
 

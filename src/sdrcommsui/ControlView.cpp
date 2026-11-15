@@ -78,7 +78,8 @@ namespace sdrcommsui {
         }
         ImGui::Text("Server: %s", udpServer.c_str());
         ImGui::Text("Port: %d", port);
-        ImGui::Text("Render FPS: %d", fps);
+        ImGui::Text("Receive Blocks per second: %d", blocksPerSecond);
+        ImGui::Text("Render Frames per second: %d", fps);
         ImGui::Text("Current Timestamp: %s", currentTs.c_str());
         std::string centerFreqStr = std::to_string(currentFreq);
         //ImGui::InputText("Center Frequency Hz", centerFreqStr.c_str());
@@ -155,6 +156,19 @@ namespace sdrcommsui {
                 std::shared_lock<std::shared_mutex> lock(this->updateMutex);
                 centerFreq = block.centerFreq;
                 timestampMs = block.timestampMs;
+
+                auto now = std::chrono::steady_clock::now();
+                long delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - this->lastSecond).count();
+                if (delta > 1000) {
+                    this->lastSecond = now;
+                    {
+                        std::shared_lock<std::shared_mutex> lock(this->updateMutex);
+                        this->blocksPerSecond = this->tempBlockCount;
+                        this->tempBlockCount = 0;
+                    }
+                } else {
+                    this->tempBlockCount++;
+                }
             }
         }
     }
