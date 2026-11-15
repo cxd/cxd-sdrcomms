@@ -55,6 +55,7 @@ namespace sdrcommsui {
         std::shared_ptr<sdrcomms::FFTTransform> fft;
         std::vector<sdrcomms::IQBlock> iqBlocks;
         std::vector<std::vector<float>> spectrum;
+        std::vector<float> avgFrequenciesHz {};
         std::atomic<float> centerFreq;
         std::shared_mutex updateMutex;
         std::thread receive_thread;
@@ -63,6 +64,12 @@ namespace sdrcommsui {
 
         const size_t MAX_QUEUE_SIZE = 256;
 
+        const float TICK_MARGIN = 50;
+        const int TICK_HEIGHT = 5;
+        const int TICK_STEP = 4;
+        const int LABEL_TICK_OFFSET = 10;
+        const int LABEL_TICK_STEP = 10;
+        const int LABEL_TICK_TITLE_OFFSET = 30;
         /**
          * display block width in pixels
          */
@@ -81,7 +88,13 @@ namespace sdrcommsui {
          * draw blocks in the renderer
          * @param renderer
          */
-        void draw_blocks(SDL_Renderer *renderer, std::vector<std::vector<float>> averages);
+        void draw_blocks(SDL_Renderer *renderer, const std::vector<std::vector<float>>& averages);
+
+        /**
+         * draw the tickmarks for the average frequencies
+         * @param renderer
+         */
+        void draw_frequencies(SDL_Renderer *renderer, const std::vector<float> &frequencies);
 
         /**
          * get min and max power from spectrum
@@ -111,6 +124,21 @@ namespace sdrcommsui {
          * @return
          */
         std::vector<std::complex<float>> fftShift(const std::vector<std::complex<float>>& source);
+
+        /**
+         * Generate a vector of the frequencies for the spectrum.
+         * @param centerFreqHz
+         * @param sampleRateHz
+         * @param num_samples
+         * @return
+         */
+        std::vector<float> calculateFrequencies(const double centerFreqHz, const double sampleRateHz, const size_t num_samples);
+
+        /**
+         * Average the frequencies.
+         * @return
+         */
+        std::vector<float> averageFrequencies(const std::vector<float> &frequencies);
 
         /**
          * average the spectrum for block sizes within our drawable dimensions

@@ -211,7 +211,7 @@ namespace drawing {
         SDL_RenderSetViewport(renderer, &bottom_viewport);
         SDL_RenderFillRect(renderer, &bottom_viewport);
 
-        sketch->DrawSketch(renderer, width, height, TimeStep, Frame, Fps);
+        sketch->DrawSketch(renderer, width, bottom_viewport.h, TimeStep, Frame, Fps);
         SDL_RenderSetViewport(renderer, NULL);
     }
 

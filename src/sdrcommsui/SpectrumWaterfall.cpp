@@ -4,7 +4,10 @@
 
 #include "include/SpectrumWaterfall.h"
 
+#include <format>
+
 #include "constants.h"
+#include "SDL2_gfxPrimitives.h"
 
 namespace sdrcommsui {
     SpectrumWaterfall::SpectrumWaterfall(int width, int height, const size_t fftSize,
@@ -55,8 +58,10 @@ namespace sdrcommsui {
      */
     void SpectrumWaterfall::DrawSketch(SDL_Renderer *renderer, int width, int height,
                                        int timestep, int frame, int fps) {
-
+        this->width = width;
+        this->height = height;
         std::vector<std::vector<float>> averages;
+        std::vector<float> frequencies;
         {
             std::shared_lock<std::shared_mutex> lock(this->updateMutex);
 
@@ -64,8 +69,10 @@ namespace sdrcommsui {
                 return;
             }
             averages = this->spectrum;
+            frequencies = this->avgFrequenciesHz;
         }
         this->draw_blocks(renderer, averages);
+        this->draw_frequencies(renderer, frequencies);
     }
 
     /**
@@ -73,7 +80,7 @@ namespace sdrcommsui {
      * @param renderer
      * @param averages
      */
-    void SpectrumWaterfall::draw_blocks(SDL_Renderer *renderer, std::vector<std::vector<float>> averages) {
+    void SpectrumWaterfall::draw_blocks(SDL_Renderer *renderer, const std::vector<std::vector<float>>& averages) {
         if (averages.size() == 0) {
             return;
         }
@@ -93,8 +100,10 @@ namespace sdrcommsui {
                 break;
             }
             size_t num_blocks = averages[i].size();
-            const float top = static_cast<float>(i)*height/num_rows;
-            const float bottom = static_cast<float>(i+1)*height/num_rows;
+            // allow 50 pixels at the bottom for labels.
+            float waterfallHeight = static_cast<float>(height - TICK_MARGIN);
+            const float top = static_cast<float>(i)*waterfallHeight/num_rows;
+            const float bottom = static_cast<float>(i+1)*waterfallHeight/num_rows;
 
             for (size_t j = 0; j < num_blocks; j++) {
 
@@ -128,6 +137,64 @@ namespace sdrcommsui {
             indices.data(), static_cast<int>(indices.size()));
 
     }
+
+    /**
+ * draw the tickmarks for the average frequencies
+ * @param renderer
+ */
+    void SpectrumWaterfall::draw_frequencies(SDL_Renderer *renderer, const std::vector<float>& frequencies) {
+
+        if (frequencies.size() == 0) {
+            return;
+        }
+        float midFreq = frequencies[frequencies.size()/2];
+        float minFreq = frequencies[0];
+        float maxFreq = frequencies[frequencies.size()-1];
+
+        // 1 GHz = 1e9 Hz
+        // 1 MHz = 1e6 Hz
+        // 1 kHz = 1e3 Hz
+        float divider = 1e9;
+        std::string unit = "GHz";
+        if (maxFreq > 1e9/2.0) {
+            divider = 1e9;
+        } else {
+            divider = 1e6;
+            unit = "MHz";
+        }
+
+        int top = (height - TICK_MARGIN);
+        int tick_step = TICK_STEP;
+        // draw every fourth step.
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
+        size_t num_blocks = this->width / this->block_width;
+
+        for (size_t i=0;i<frequencies.size();i+=tick_step) {
+
+            const float left = static_cast<float>(i)*width/num_blocks;
+            const float right = static_cast<float>(i+1)*width/num_blocks;
+
+            float x = (left + right)/2;
+            SDL_RenderDrawLine(renderer, x, top, x, top + 5);
+
+            if (i % LABEL_TICK_STEP) {
+                // draw text.
+                std::string value = std::format("{:.2f}", frequencies[i]/divider);
+                stringRGBA(renderer, x, top + LABEL_TICK_OFFSET, value.c_str(), 255, 255, 255, 255);
+            }
+
+        }
+        int n = frequencies.size()/2 - 30;
+        const float left = static_cast<float>(n)*width/num_blocks;
+        const float right = static_cast<float>(n+1)*width/num_blocks;
+
+        float x = (left + right)/2;
+        std::string title = "Frequencies (" + unit + ")";
+        stringRGBA(renderer, x, top + LABEL_TICK_TITLE_OFFSET, title.c_str(), 255, 255, 255, 255);
+    }
+
 
     /**
         * get min and max power from spectrum
@@ -237,7 +304,9 @@ namespace sdrcommsui {
                 // the last value of the spectrum is drawn at the bottom of the rectangle.
                 // we should modify the spectrum to be a sliding average of the last N values.
                 std::vector<std::complex<float> > fftshifted = this->fft->fftShift(fftOut);
+                std::vector<float> frequencies = this->calculateFrequencies(block.centerFreq, sdrcomms::DEFAULT_SAMPLE_RATE_HZ, fftshifted.size());
                 std::vector<float> block_averages = this->slidingAverage(fftshifted);
+                this->avgFrequenciesHz = this->averageFrequencies(frequencies);
 
                 this->centerFreq = block.centerFreq;
 
@@ -262,7 +331,6 @@ namespace sdrcommsui {
      */
     std::vector<float> SpectrumWaterfall::slidingAverage(
         const std::vector<std::complex<float> > &spectrum) {
-        size_t blocks_size = spectrum.size() / this->block_width;
         size_t num_blocks = this->width / this->block_width;
         std::vector<float> block_averages(num_blocks);
         for (size_t i = 0; i < num_blocks; i++) {
@@ -277,5 +345,45 @@ namespace sdrcommsui {
             block_averages[i] = 10.0f * std::log10(avg_power + 1e-20f);
         }
         return block_averages;
+    }
+
+    /**
+         * Generate a vector of the frequencies for the spectrum.
+         * @param centerFreqHz
+         * @param sampleRateHz
+         * @param num_samples
+         * @return
+         */
+    std::vector<float> SpectrumWaterfall::calculateFrequencies(const double centerFreqHz, const double sampleRateHz, const size_t num_samples) {
+        std::vector<float> frequencies {};
+        double binSpacingHz = sampleRateHz / num_samples;
+        for (int i=0;i<num_samples;i++) {
+            double freqHz = centerFreqHz + (i - num_samples / 2.0) * binSpacingHz;
+            frequencies.push_back(freqHz);
+        }
+        return frequencies;
+    }
+
+    /**
+         * Average the frequencies.
+         * @return
+         */
+    std::vector<float> SpectrumWaterfall::averageFrequencies(const std::vector<float> &frequencies) {
+        size_t num_blocks = this->width / this->block_width;
+
+        std::vector<float> avgFreq(num_blocks);
+        if (frequencies.size() == 0) {
+            return avgFreq;
+        }
+        size_t sample_size = frequencies.size();
+        for (size_t i = 0; i < num_blocks; i++) {
+            size_t start_index = i * this->block_width;
+            size_t end_index = std::min(start_index + this->block_width, sample_size);
+            for (size_t j = start_index; j < end_index; j++) {
+                avgFreq[i] += frequencies[j];
+            }
+            avgFreq[i] /= this->block_width;
+        }
+        return avgFreq;
     }
 } // sdrcommsui
