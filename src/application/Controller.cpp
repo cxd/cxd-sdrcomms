@@ -48,6 +48,7 @@ bool Controller::stop() {
             control_thread.join();
         }
     }
+    return true;
 }
 
 /**

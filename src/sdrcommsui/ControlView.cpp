@@ -65,10 +65,16 @@ namespace sdrcommsui {
     void ControlView::DrawSketch(SDL_Renderer *renderer, int width, int height, int timestep, int frame, int fps) {
         // draw ImGui Controls.
         std::string currentTs, currentClassTs, currentLabel = "";
+        bool localEdit = false;
         double currentFreq, currentConfidence = 0;
         {
             std::shared_lock<std::shared_mutex> lock(this->updateMutex);
-            currentFreq = centerFreq;
+            localEdit = isEditing;
+            if (autoScan) {
+                currentFreq = centerFreq;
+            } else {
+                currentFreq = editCenterFreq;
+            }
             currentTs = format_ts(timestampMs);
             if (classLabel.length() > 0 && confidence > 0) {
                 currentClassTs = format_ts(classTimestampMs);
@@ -81,9 +87,10 @@ namespace sdrcommsui {
         ImGui::Text("Receive Blocks per second: %d", blocksPerSecond);
         ImGui::Text("Render Frames per second: %d", fps);
         ImGui::Text("Current Timestamp: %s", currentTs.c_str());
-        std::string centerFreqStr = std::to_string(currentFreq);
         //ImGui::InputText("Center Frequency Hz", centerFreqStr.c_str());
-        ImGui::Text("Center Frequency: %f", currentFreq);
+        ImGui::BeginDisabled(autoScan);
+        localEdit = ImGui::InputDouble("Center Frequency (Hz)", &currentFreq, 1000.0, 10000.0, "%.0f");
+        ImGui::EndDisabled();
         bool scanFrequency = autoScan;
         bool scanModified = ImGui::Checkbox("Scan Frequency Automatically", &scanFrequency);
 
@@ -99,11 +106,30 @@ namespace sdrcommsui {
         }
         // check if the autoScan setting has changed from true to false.
         if (scanModified && !scanFrequency && autoScan) {
-            autoScan = false;
-            send_control_frequency_msg();
+            {
+                std::shared_lock<std::shared_mutex> lock(this->updateMutex);
+                autoScan = false;
+                isEditing = true;
+                editCenterFreq = centerFreq;
+            }
+            send_control_frequency_msg(false);
         } else if (scanModified && scanFrequency && !autoScan) {
-            autoScan = true;
-            send_control_frequency_msg();
+            {
+                std::shared_lock<std::shared_mutex> lock(this->updateMutex);
+                autoScan = true;
+                isEditing = false;
+            }
+            send_control_frequency_msg(false);
+        } else if (currentFreq != centerFreq && !scanFrequency && !autoScan) {
+            if (std::isfinite(currentFreq) && currentFreq > 0) {
+                {
+                    std::shared_lock<std::shared_mutex> lock(this->updateMutex);
+                    centerFreq = currentFreq;
+                    editCenterFreq = currentFreq;
+                }
+                send_control_frequency_msg(true);
+
+            }
         }
     }
 
@@ -130,10 +156,17 @@ namespace sdrcommsui {
     /**
          * use current settings to send the control frequency message.
          */
-    void ControlView::send_control_frequency_msg() {
+    void ControlView::send_control_frequency_msg(bool updateFreq) {
         if (autoScan) {
             sdrcomms::ControlMessage msg{
                 sdrcomms::MessageType::MSG_AUTO_SCAN,
+                sdrcomms::MessageResult::MSG_NONE,
+                centerFreq,
+            };
+            this->outboundMessageQueue->push(msg);
+        } else if (updateFreq) {
+            sdrcomms::ControlMessage msg{
+                sdrcomms::MessageType::MSG_SET_FREQ,
                 sdrcomms::MessageResult::MSG_NONE,
                 centerFreq,
             };

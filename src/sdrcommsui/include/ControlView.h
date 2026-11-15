@@ -51,12 +51,13 @@ namespace sdrcommsui {
         bool autoScan = true;
         long long timestampMs;
         double centerFreq;
+        double editCenterFreq;
         long long classTimestampMs = 0;
         std::string classLabel = "";
         double confidence = 0;
         int blocksPerSecond = 0;
         int tempBlockCount = 0;
-
+        bool isEditing = false;
         std::atomic<bool> isInit;
         std::atomic<bool> isRunning;
         std::shared_mutex updateMutex;
@@ -82,7 +83,7 @@ namespace sdrcommsui {
         /**
          * use current settings to send the control frequency message.
          */
-        void send_control_frequency_msg();
+        void send_control_frequency_msg(bool updateFreq);
 
         /**
          * consume inbound messages
