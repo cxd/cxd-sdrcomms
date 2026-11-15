@@ -120,7 +120,7 @@ namespace sdrcommsui {
                 isEditing = false;
             }
             send_control_frequency_msg(false);
-        } else if (currentFreq != centerFreq && !scanFrequency && !autoScan) {
+        } else if (localEdit && !autoScan && isEditing) {
             if (std::isfinite(currentFreq) && currentFreq > 0) {
                 {
                     std::shared_lock<std::shared_mutex> lock(this->updateMutex);

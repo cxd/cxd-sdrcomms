@@ -5,6 +5,7 @@
 #include "include/SpectrumWaterfall.h"
 
 #include <format>
+#include <iostream>
 
 #include "constants.h"
 #include "SDL2_gfxPrimitives.h"
@@ -225,13 +226,8 @@ namespace sdrcommsui {
                 max = cMax;
             }
         }
-        /*
-        if (min > min_spectrum_db) {
-            min = min_spectrum_db;
-        }
-        if (max < max_spectrum_db) {
-            max = max_spectrum_db;
-        }*/
+        //std::cout << "min: " << min << ", max: " << max << std::endl;
+
         return std::make_tuple(min,max);
     }
 
@@ -340,7 +336,8 @@ namespace sdrcommsui {
             size_t start_index = i * this->block_width;
             size_t end_index = std::min(start_index + this->block_width, spectrum.size());
             for (size_t j = start_index; j < end_index; j++) {
-                block_averages[i] += std::abs(spectrum[j]);
+                // squared magnitude
+                block_averages[i] += std::norm(spectrum[j]);
             }
             block_averages[i] /= this->block_width;
             float avg_power = block_averages[i];
