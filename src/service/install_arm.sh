@@ -10,6 +10,9 @@ sudo cp services/mosquitto.service /etc/systemd/system/
 
 sudo cp services/etc/mosquitto/conf.d/*.conf /etc/mosquitto/conf.d/
 
+sudo systemctl stop soapyremote-custom.service &>> /dev/null
+sudo systemctl stop mosquitto &>> /dev/null
+
 sudo systemctl daemon-reload
 sudo systemctl enable soapyremote-custom.service
 sudo systemctl start soapyremote-custom.service
