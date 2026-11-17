@@ -1,5 +1,5 @@
 # Force Podman to fetch the explicit ARM64 architecture image variant
-FROM --platform=linux/arm64 ubuntu:26.04
+FROM --platform=linux/arm64 debian:trixie
 
 # Block interactive installation warnings
 ENV DEBIAN_FRONTEND=noninteractive
