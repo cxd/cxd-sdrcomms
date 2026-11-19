@@ -1,4 +1,7 @@
 #!/bin/bash
+sudo systemctl stop soapyremote-custom.service &>> /dev/null
+sudo systemctl stop mosquitto &>> /dev/null
+sudo rm -rf /opt/sdrcomms
 
 sudo mkdir -p /opt/sdrcomms
 sudo cp -r sdrcomms/bin /opt/sdrcomms/
@@ -10,8 +13,7 @@ sudo cp services/mosquitto.service /etc/systemd/system/
 
 sudo cp services/etc/mosquitto/conf.d/*.conf /etc/mosquitto/conf.d/
 
-sudo systemctl stop soapyremote-custom.service &>> /dev/null
-sudo systemctl stop mosquitto &>> /dev/null
+
 
 sudo systemctl daemon-reload
 sudo systemctl enable soapyremote-custom.service

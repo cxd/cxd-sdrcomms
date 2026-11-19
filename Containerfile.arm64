@@ -35,7 +35,7 @@ glslang-tools \
 glslc \
 mosquitto-dev \
 libmosquitto-dev \
-libonnxruntime-dev libonnxruntime-providers \
+libonnxruntime-dev \
 libliquid-dev \
 libfftw3-dev
 
