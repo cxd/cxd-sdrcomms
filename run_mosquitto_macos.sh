@@ -1,3 +1,3 @@
 #!/bin/zsh
 
-mosquitto -c $PWD/src/service/mosquitto_sdrcomms.conf
+mosquitto -c $PWD/src/service/services/etc/mosquitto/conf.d/mosquitto_sdrcomms.conf
