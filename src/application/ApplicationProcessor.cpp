@@ -91,8 +91,11 @@ std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::make_model_proc
     auto metric_processor = std::make_shared<sdrcomms::SlidingCorrelationMetricProcessor>(
         metric_key, downsampleOp, nullptr);
     auto trigger_processors = std::vector<std::shared_ptr<sdrcomms::TriggerProcessor> >{
+        // use RMS db threshold
         rms_processor,
+        // use correlation threshold
         metric_processor
+
     };
     modelProcessor = std::make_shared<sdrcomms::ClassificationModelProcessor>(op,
                                                                               basePath,
