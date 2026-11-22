@@ -13,9 +13,7 @@ namespace sdrcomms {
                                                                std::string basePath,
                                                                const ModelFileSpec &modelSpec,
                                                                const ClassMap &classMap,
-                                                               std::string rms_db_key,
-                                                               float rms_db_threshold,
-                                                               std::shared_ptr<RootMeanSquareProcessor> rmsProcessor,
+                                                               std::vector<std::shared_ptr<TriggerProcessor>> triggerProcessors,
                                                                const std::vector<ProcessorOps> &processorOps,
                                                                std::shared_ptr<MessageQueue<sdrcomms::ControlMessage> >
                                                                eventQueue) {
@@ -23,9 +21,7 @@ namespace sdrcomms {
         this->basePath = basePath;
         this->modelSpec = modelSpec;
         this->classMap = classMap;
-        this->rms_db_key = rms_db_key;
-        this->rms_db_threshold = rms_db_threshold;
-        this->rmsProcessor = rmsProcessor;
+        this->triggerProcessors = triggerProcessors;
         this->processorOps = processorOps;
         // the event queue can be used to post classification events on a separate thread.
         this->eventQueue = eventQueue;
@@ -75,17 +71,7 @@ namespace sdrcomms {
         return true;
     }
 
-    /**
-         * lookup rms db
-         */
-    float ClassificationModelProcessor::get_rms_db_threshold(std::map<std::string, std::shared_ptr<IQBlock>> &attachments) {
-        if (attachments.contains(rms_db_key)) {
-            if (attachments.at(rms_db_key) != nullptr && attachments.at(rms_db_key)->samples.size() > 0) {
-                return attachments.at(rms_db_key)->samples[0].real();
-            }
-        }
-        return 0.0;
-    }
+
 
     /**
          * process the incoming block and update the inner processor.
@@ -96,14 +82,15 @@ namespace sdrcomms {
         if (!isInit) {
             return;
         }
-        if (this->rmsProcessor != nullptr) {
-            // using rms db threshold before running detection.
-            this->rmsProcessor->process(block, attachments);
-            float rms_db = get_rms_db_threshold(attachments);
-            if (rms_db > this->rms_db_threshold) {
-                IQBlock copyBlock{block};
-                copyBlock.attachments = attachments;
-                this->classifyQueue->push(copyBlock);
+        if (triggerProcessors.size() > 0) {
+            for (auto trigger : triggerProcessors) {
+                trigger->process(block, attachments);
+                if (trigger->is_active(attachments)) {
+                    IQBlock copyBlock{block};
+                    copyBlock.attachments = attachments;
+                    this->classifyQueue->push(copyBlock);
+                    break;
+                }
             }
         } else {
             // not using rms threshold

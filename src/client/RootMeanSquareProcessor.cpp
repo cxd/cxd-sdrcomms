@@ -9,10 +9,12 @@
 #include <numeric>
 
 namespace sdrcomms {
-    RootMeanSquareProcessor::RootMeanSquareProcessor(std::string attach_key, std::string process_key, std::shared_ptr<SampleProcessor> inner) {
+    RootMeanSquareProcessor::RootMeanSquareProcessor(std::string attach_key, std::string process_key, std::shared_ptr<SampleProcessor> inner,
+        float rms_threshold) {
         this->attach_key = attach_key;
         this->process_key = process_key;
         this->inner = inner;
+        this->rms_threshold = rms_threshold;
     }
 
     /**
@@ -22,7 +24,7 @@ namespace sdrcomms {
     void RootMeanSquareProcessor::process(IQBlock &block,
                                           std::map<std::string, std::shared_ptr<IQBlock> > &attachments) {
         if (!process_key.empty()) {
-            std::shared_ptr<IQBlock> innerBlock = get_attachment(attachments);
+            std::shared_ptr<IQBlock> innerBlock = get_attachment(process_key, attachments);
             if (innerBlock != nullptr) {
                 process_samples(*innerBlock, attachments);
             }
@@ -36,17 +38,27 @@ namespace sdrcomms {
         }
     }
 
-
-
-    std::shared_ptr<IQBlock> RootMeanSquareProcessor::get_attachment(std::map<std::string, std::shared_ptr<IQBlock>> &attachments) {
-        if (process_key.empty()) {
-            return nullptr;
-        }
-        if (attachments.find(process_key) == attachments.end()) {
-            return nullptr;
-        }
-        return attachments[process_key];
+    /**
+         * check if the trigger is activated
+         * @param bool
+         */
+    bool RootMeanSquareProcessor::is_active(std::map<std::string, std::shared_ptr<IQBlock>> &attachments) {
+        float rms_db_threshold = get_rms_db_threshold(attachments);
+        return rms_db_threshold > rms_threshold;
     }
+
+    /**
+         * lookup rms db
+         */
+    float RootMeanSquareProcessor::get_rms_db_threshold(std::map<std::string, std::shared_ptr<IQBlock>> &attachments) {
+        if (attachments.contains(attach_key)) {
+            if (attachments.at(attach_key) != nullptr && attachments.at(attach_key)->samples.size() > 0) {
+                return attachments.at(attach_key)->samples[0].real();
+            }
+        }
+        return 0.0;
+    }
+
 
     void RootMeanSquareProcessor::process_samples(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) {
         size_t n = block.samples.size();

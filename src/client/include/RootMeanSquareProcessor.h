@@ -10,7 +10,7 @@
 #include "SampleProcessor.h"
 
 namespace sdrcomms {
-    class RootMeanSquareProcessor : public SampleProcessor {
+    class RootMeanSquareProcessor : public TriggerProcessor {
     public:
         /**
          *
@@ -20,7 +20,7 @@ namespace sdrcomms {
          * if left empty it will process the block samples instead.
          * @param inner
          */
-        RootMeanSquareProcessor(std::string attach_key, std::string process_key, std::shared_ptr<SampleProcessor> inner);
+        RootMeanSquareProcessor(std::string attach_key, std::string process_key, std::shared_ptr<SampleProcessor> inner, float rms_threshold );
 
         /**
              * process the supplied IQBlock
@@ -28,13 +28,23 @@ namespace sdrcomms {
              */
         void process(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) override;
 
+        /**
+         * check if the trigger is activated
+         * @param bool
+         */
+        bool is_active(std::map<std::string, std::shared_ptr<IQBlock>> &attachments) override;
+
     private:
 
-        std::string process_key = "";
-
-        std::shared_ptr<IQBlock> get_attachment(std::map<std::string, std::shared_ptr<IQBlock>> &attachments);
+        float rms_threshold = 0.0f;
 
         void process_samples(IQBlock &block, std::map<std::string, std::shared_ptr<IQBlock>> &attachments);
+
+
+        /**
+         * lookup rms db
+         */
+        float get_rms_db_threshold(std::map<std::string, std::shared_ptr<IQBlock>> &attachments);
 
     };
 }

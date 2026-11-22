@@ -11,6 +11,7 @@
 #include "constants.h"
 #include "DownsampleProcessor.h"
 #include "RootMeanSquareProcessor.h"
+#include "SlidingCorrelationMetricProcessor.h"
 
 ApplicationProcessor::ApplicationProcessor(std::string udpServerAddress, int udpPort,
                                            double source_sample_rate_hz,
@@ -85,14 +86,19 @@ std::shared_ptr<sdrcomms::SampleProcessor> ApplicationProcessor::make_model_proc
     std::string op = sdrcomms::operation_to_string(sdrcomms::ProcessorOps::CLASSIFY);
     //  attach an RMS block into the processing chain before the downsampler.
     std::string downsampleOp = sdrcomms::operation_to_string(sdrcomms::ProcessorOps::DOWNSAMPLE);
-    auto rms_processor = std::make_shared<sdrcomms::RootMeanSquareProcessor>(rms_key, downsampleOp, nullptr);
+    auto rms_processor = std::make_shared<sdrcomms::RootMeanSquareProcessor>(
+        rms_key, downsampleOp, nullptr, rms_db_threshold);
+    auto metric_processor = std::make_shared<sdrcomms::SlidingCorrelationMetricProcessor>(
+        metric_key, downsampleOp, nullptr);
+    auto trigger_processors = std::vector<std::shared_ptr<sdrcomms::TriggerProcessor> >{
+        rms_processor,
+        metric_processor
+    };
     modelProcessor = std::make_shared<sdrcomms::ClassificationModelProcessor>(op,
                                                                               basePath,
                                                                               modelSpec,
                                                                               classMap,
-                                                                              rms_key,
-                                                                              rms_db_threshold,
-                                                                              rms_processor,
+                                                                              trigger_processors,
                                                                               processorOps,
                                                                               eventQueue);
     if (!modelProcessor->init()) {

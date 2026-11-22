@@ -28,6 +28,7 @@ namespace sdrcomms {
 
     protected:
         std::string attach_key;
+        std::string process_key = "";
         /**
          * pointer to inner sample processor
          */
@@ -64,6 +65,18 @@ namespace sdrcomms {
             }
         }
 
+
+        std::shared_ptr<IQBlock> get_attachment(const std::string& key, std::map<std::string, std::shared_ptr<IQBlock>> &attachments) {
+            if (key.empty()) {
+                return nullptr;
+            }
+            if (attachments.find(key) == attachments.end()) {
+                return nullptr;
+            }
+            return attachments[key];
+        }
+
+
     private:
         /**
          * copy attachments into the supplied map.
@@ -87,6 +100,20 @@ namespace sdrcomms {
             block->attachments.clear();
         }
 
+    };
+
+    /**
+     * a trigger processor is a special type of sample processor
+     * that can be used to make a decision such as thresholding a metric
+     */
+    class TriggerProcessor  : public SampleProcessor {
+    public:
+
+        /**
+         * check if the trigger is activated
+         * @param bool
+         */
+        virtual bool is_active(std::map<std::string, std::shared_ptr<IQBlock>> &attachments) = 0;
     };
 }
 

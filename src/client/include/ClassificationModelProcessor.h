@@ -22,9 +22,7 @@ namespace sdrcomms {
             std::string basePath,
             const ModelFileSpec &modelSpec,
             const ClassMap &classMap,
-            std::string rms_db_key,
-            float rms_db_threshold,
-            std::shared_ptr<RootMeanSquareProcessor> rmsProcessor,
+            std::vector<std::shared_ptr<TriggerProcessor>> triggerProcessors,
             const std::vector<ProcessorOps> &processorOps,
             std::shared_ptr<MessageQueue<sdrcomms::ControlMessage>> eventQueue);
 
@@ -50,12 +48,9 @@ namespace sdrcomms {
         std::string basePath;
         std::string modelPath;
 
-        // the key to lookup the rms db threshold
-        std::string rms_db_key = "rms_db";
-        // set the rms db threshold for signal detection
-        // we ignore any signals with a lower threshold.
-        float rms_db_threshold = -30;
-        std::shared_ptr<RootMeanSquareProcessor> rmsProcessor;
+        // trigger processors can determine if the classifier should execute.
+        // checks if any one of these triggers are activated
+        std::vector<std::shared_ptr<TriggerProcessor>> triggerProcessors;
 
         ModelFileSpec modelSpec{};
         ClassMap classMap{};
@@ -83,10 +78,6 @@ namespace sdrcomms {
          */
         void classify_worker();
 
-        /**
-         * lookup rms db
-         */
-        float get_rms_db_threshold(std::map<std::string, std::shared_ptr<IQBlock>> &attachments);
     };
 } // sdrcomms
 

@@ -70,6 +70,7 @@ private:
     std::string modelSpecFile;
     double source_sample_rate_hz = sdrcomms::DEFAULT_SAMPLE_RATE_HZ;
     std::string rms_key = "rms";
+    std::string metric_key = "correlate_metric";
     float rms_db_threshold = sdrcomms::DEFAULT_RMS_DB_THRESHOLD;
     size_t required_samples = sdrcomms::REQUIRED_SAMPLES;
 
