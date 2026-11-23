@@ -59,7 +59,17 @@ The following points are areas where the current integration has focused on:
 - management of multiple processing queues for receiving streams from SDR, processing, model classification and network communications,
 - testing cross compilation against arm64 for raspberry pi targets.
 
+## Example Client UI
 
+This project includes an example client UI which receives IQ Value streams over UDP and the classification events over MQTT on the TCP port. It provides an example waterfall visualisation for the IQ Value stream, the current frequency graph (both in SDL), and a small control interface (in ImGui), to allow viewing current data rates, controlling whether to automatically scan or to manually set the center frequency.
+
+An example is shown below.
+
+[![Alt text for the video](https://github.com/cxd/cxd-sdrcomms/raw/refs/heads/main/docs/assets/screen_recording_001.mp4)](https://github.com/cxd/cxd-sdrcomms/raw/refs/heads/main/docs/assets/screen_recording_001.mp4)
+
+
+
+Typically the client may connect intermittently over a WiFi connection to the server (as in the case when the SDR and server are deployed on a mobile platform such as a drone). The wifi connection will be challenged to deliver the UDP stream at a large distance. As the stream can mean gigabytes of data transfer over a duration of time. However, classification events are small packets, and may be  
 
 # Dependencies
 
