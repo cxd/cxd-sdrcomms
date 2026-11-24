@@ -8,7 +8,10 @@ This project provides a shell for experimenting with the integration of modulati
 
 This project looks at integration of such models within a wider system incorporating SDR, control, network and client layers. 
 
-This project is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+This project is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/) 
+
+<img src="https://github.com/cxd/cxd-sdrcomms/raw/refs/heads/main/docs/assets/88x31.png?sanitize=true" alt="Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License" />.
+
 
 To cite this project use the following:
 
@@ -65,7 +68,7 @@ This project includes an example client UI which receives IQ Value streams over 
 
 An example is shown below.
 
-https://github.com/cxd/cxd-sdrcomms/raw/refs/heads/main/docs/assets/screen_recording_001.mp4
+https://github.com/cxd/cxd-sdrcomms/raw/refs/heads/main/docs/assets/screen_recording_001.mp4?sanitize=true
 
 
 Typically the client may connect intermittently over a WiFi connection to the server (as in the case when the SDR and server are deployed on a mobile platform such as a drone). The wifi connection will be challenged to deliver the UDP stream at a large distance. As the stream can mean gigabytes of data transfer over a duration of time. However, classification events are small packets. When on board an autonomous platform, the IQ Value stream may not be used at all, instead classification events may be sent over MQTT locally to another controller process that is onboard the platform. The event paired with other sensor data may then be repackaged and issued to a connected control system downstream. 
