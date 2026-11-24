@@ -322,6 +322,9 @@ It uses two input transforms which are first a downsample transform and second a
 
 Those inputs are then converted into a tensor of shape [1 x 4 x 2048] where the real and imaginary values of the downsampled IQ time domain and the FFT are each a single channel (the second dimension ).
 
+Note also the model itself is not very accurate, it is provided only to test integration, a separate repository will be created to demonstrate how the data sets and models are prepared.
+
+
 The ```class_map_v1.json``` file maps the indices of the [1 x num_classes] output. It is a simple mapping between class label and index position, and is used to translate between the index containing the maximum probability and the class label.
 
 ```
@@ -396,10 +399,12 @@ The sdrcommsui will connect to an already running instance of the application. I
 
 ### Contributing ###
 
-I joke that in the age of AI, people will only write source code for the same reason they whittle wooden spoons. So aside from googling and searching for example use cases and yes, asking google gemini for advice on how to use unfamiliar APIs, or even use those ancient papery things known as "books". This project is, more often than not, an example of a handmade code base. 
+I joke that in the age of AI, people will only write source code for the same reason they whittle wooden spoons. In this project, the extent of AI has been in searching or asking the google agent for examples of how to use unfamiliar APIs. Other that, there has been use of reference websites, and even occasional use of those ancient papery things known as "books". 
 
 ![Handmade](https://github.com/cxd/cxd-sdrcomms/raw/refs/heads/main/docs/assets/Handprint.png)
 
 Handprint by _RootOfAllLight, CC BY-SA 4.0, via Wikimedia Commons_
 
-For this project its fine to google and search for information about how to use apis, or get various hints on language usage, but for the most part, I'd prefer manual contributions. If you want to run wild with agents you can always "go fork your own repo".
+For this project, if you'd like to contribute it'd be nice to avoid any kind of agent workflow based contributions thankyou. There's nothing stopping you doing it in your own copy of the repo.
+
+However, there is plenty of work to explore in this area of application as mentioned earlier in this README. 
