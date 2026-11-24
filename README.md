@@ -211,3 +211,9 @@ soapysrd util can be used.
 Note the package soapyremote may need to be installed locally to allow access
 by soapysdr util to the soapy remote server.
 
+
+#### This is a handmade project ####
+
+![Handmade](https://github.com/cxd/cxd-sdrcomms/raw/refs/heads/main/docs/assets/Handprint.png)
+
+logo by _RootOfAllLight, CC BY-SA 4.0, via Wikimedia Commons_
