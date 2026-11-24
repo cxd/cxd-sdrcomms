@@ -1,4 +1,4 @@
-# sdr-comms - a project for SDR integration with application to modulation classification tasks
+# sdr-comms - a project for SDR experimentation with application to modulation classification tasks
 
 This project provides a shell for experimenting with the integration of modulation classification models that have been exported in [ONNX](https://onnx.ai) format in a research setting.
 
