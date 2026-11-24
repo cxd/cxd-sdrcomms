@@ -405,6 +405,6 @@ I joke that in the age of AI, people will only write source code for the same re
 
 Handprint by _RootOfAllLight, CC BY-SA 4.0, via Wikimedia Commons_
 
-For this project, if you'd like to contribute it'd be nice to avoid any kind of agent workflow based contributions thankyou. There's nothing stopping you doing it in your own copy of the repo.
+For this project, if you'd like to contribute it'd be nice to avoid any kind of agent workflow for the time being. There's nothing stopping you doing it in your own copy of the repo.
 
 However, there is plenty of work to explore in this area of application as mentioned earlier in this README. 
