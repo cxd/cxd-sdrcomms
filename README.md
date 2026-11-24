@@ -10,7 +10,7 @@ This project looks at integration of such models within a wider system incorpora
 
 This project is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/) 
 
-<img src="https://github.com/cxd/cxd-sdrcomms/raw/refs/heads/main/docs/assets/88x31.png?sanitize=true" alt="Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License" />.
+<img src="https://github.com/cxd/cxd-sdrcomms/raw/refs/heads/main/docs/assets/88x31.png?sanitize=true" alt="Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License" />
 
 
 To cite this project use the following:
@@ -29,20 +29,20 @@ where ```YYYY-MM-dd``` is the date of access.
 
 ## Why Modulation Classification?
 
-Modulation Classification acts as part of an overall suite of tools in "spectral awareness", which is a subset of "situational awareness" applications. 
+Modulation Classification acts as part of an overall suite of tools in the application of "spectral awareness", which is a subset of "situational awareness" applications. 
 
-In particular, as the use of autonomous vehicles such as drones, or wheeled platforms becomes increasingly common. It becomes important to detect their presence from a distance. Similarly, activities in various fields rely on use of the spectrum for data transmission. The task of spectrum awareness is to identify the use of the spectrum. This may be paired with geolocation, and deployed on mobile platforms. Such an application when paired with visual sensing and other sensing apparatus can be used to generate a map of physical terrain. Spectrum use becomes an overlay in that map.
+In particular, as the use of autonomous vehicles such as drones, or wheeled platforms becomes increasingly common. It becomes important to detect their presence from a distance, this may be achieved through a combination of modulation classification and radio frequency fingerprinting. Similarly, activities in various fields rely on use of the spectrum for data transmission. This may be paired with geolocation, and deployed on vehicular platforms or fixed structures. Such an application when paired with visual sensing and other sensing apparatus can be used to generate a localised map of physical terrain. Spectrum use becomes an overlay in that map.
 
-However there are significant challenges (not addressed in this project), which provide opportunities for investigation such as:
+However, there are significant challenges (not addressed in this project), which provide opportunities for investigation such as:
 
 - RF sensing from a moving platform suffers from distortions such as doppler effect, how do we compensate for this in the downstream tasks?
 - Channel environments change with changing terrain, how would channel estimation help downstream tasks?
 - The decision to actually run the classifier on incoming IQ Values must make a decision "is this noise? or might it contain a signal?". What are the best ways to make this decision in a blind signal setting?
 - The available spectrum is a large space, meaning there is opportunity to explore search methods, and coordination of multiple collaborating actors scanning the environment.
 
-Companion tasks also include RF fingerprinting, which aims to identify the nature of the device, or at least transmitter that is detected. This differs from modulation classification, but provides both data enrichment as well as potential for physical layer security in upstream tasks.
+Companion tasks also include RF fingerprinting, which aims to identify the nature of the device, or at least transmitter that is detected. This differs from modulation classification, but provides both data enrichment and potential for physical layer security in upstream tasks.
 
-This area is a rich area of potential research, with many related problems to explore.
+This is a rich area of potential research, with many related problems to explore.
 
 ## Why a Focus on Integration?
 
@@ -62,6 +62,70 @@ The following points are areas where the current integration has focused on:
 - network integration for messaging using MQTT for control and classification events
 - management of multiple processing queues for receiving streams from SDR, processing, model classification and network communications,
 - testing cross compilation against arm64 for raspberry pi targets.
+
+## High Level Architecture
+
+The server application is divided into four main areas of concern.
+
+- SDR Integration
+  - Is responsible for configuration of the SDR device. In this case we use the SoapySDR interface supporting remote or local devices.
+  - Control component is also responsible for implementing the simple automatic scanning process. However, in a more advanced system the search algorithm could become a fifth area of concern. 
+- Streaming
+  - Streaming consumes the IQBlocks emitted by the SDR and supports sending to multiple client endpoints in a custom chunking protocol over UDP.
+- Processing
+  - The Processing component assembles a processing chain that may perform a series of transformations or alternately take various measurements from the incoming IQ data. The processing chain is also responsible for integration with the classification model.
+- Messaging
+  - Within the process data is exchanged over queues. 
+  - Externally, the system leverages a separate Mosquitto server to enable publication to topics. MQTT was chosen as it is a common mechanism in IoT and has low overhead for integration.
+  - Messaging over MQTT via tcp consumed by the client.
+
+The application layer leverages the core library with some application specific components to assemble the base functionality of the server. This is defined in the ```application``` source directory. 
+The common library is defined in the ```client``` source directory.
+
+To display outputs from the server and interact with the basic configuration of the controller, a client UI is defined to display a IQ time/frequency waterfall of received IQ data and the most recent frequency spectrum. 
+It also leverages an inset panel to display information for latest received timestamps, to allow the user to configure automatic scanning or manual scanning and to enter a center frequency in Hz. The client components are defined in the ```sdrcommsui``` source directory.
+
+A conceptual overview of the system is described in the diagram below.
+
+```mermaid
+---
+title: Overview
+---
+flowchart TB
+    subgraph Server   
+        subgraph SDR Integration
+            Controller -. configures .-> SDRClient
+            SDRClient -. connects .-> SDR
+            SDRClient -. emits .-> IQBlocks
+        end
+        subgraph Streaming
+            Application -. receives .-> IQBlocks
+            Application -. streams via udp .-> IQBlockStream
+        end
+        subgraph Processing
+            Application -. defines .-> ProcessingChain
+            ProcessingChain -. processes .-> IQBlocks
+            ProcessingChain -. performs .-> Preprocessing
+            ProcessingChain -. loads .-> ClassifierModel
+            ClassifierModel -. consumes .-> Preprocessing
+            ClassifierModel -. emits .-> ClassificationEvents
+        end
+        subgraph Messaging
+            MessageChannel -. emits .-> ClassificationEvents
+            MessageChannel -. receives .-> ControlMessages
+            ControlMessages -. configure .-> Controller 
+        end
+    end
+    
+    subgraph Client
+        ClientUI -. connects to .-> MessageChannel
+        ClientUI -. connects to .-> IQBlockStream
+        ClientUI -. visualises .-> IQBlockStream
+        ClientUI -. displays .-> ClassificationEvents
+        ClientUI -. configures .-> ControlMessages
+    end
+    
+```
 
 ## Example Client UI
 
