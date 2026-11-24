@@ -38,6 +38,7 @@ However there are significant challenges (not addressed in this project), which 
 - RF sensing from a moving platform suffers from distortions such as doppler effect, how do we compensate for this in the downstream tasks?
 - Channel environments change with changing terrain, how would channel estimation help downstream tasks?
 - The decision to actually run the classifier on incoming IQ Values must make a decision "is this noise? or might it contain a signal?". What are the best ways to make this decision in a blind signal setting?
+- The available spectrum is a large space, meaning there is opportunity to explore search methods, and coordination of multiple collaborating actors scanning the environment.
 
 Companion tasks also include RF fingerprinting, which aims to identify the nature of the device, or at least transmitter that is detected. This differs from modulation classification, but provides both data enrichment as well as potential for physical layer security in upstream tasks.
 
