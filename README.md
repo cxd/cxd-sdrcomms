@@ -16,7 +16,7 @@ To cite this project use the following:
 ```
 @misc{site_key,
   author       = {{Chris Davey}},
-  title        = {sdr-comms - a project for SDR integration for modulation classification tasks},
+  title        = {sdr-comms - a project for SDR experimentation with application to modulation classification tasks},
   year         = {2026},
   howpublished = {\url{https://github.com/cxd/cxd-sdrcomms}},
   note         = {Accessed: YYYY-MM-dd}
