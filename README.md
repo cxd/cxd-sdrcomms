@@ -1,6 +1,4 @@
-# sdr-comms - a project for SDR integration for modulation classification tasks
-
-
+# sdr-comms - a project for SDR integration with application to modulation classification tasks
 
 This project provides a shell for experimenting with the integration of modulation classification models that have been exported in [ONNX](https://onnx.ai) format in a research setting.
 
@@ -142,79 +140,261 @@ Typically the client may connect intermittently over a WiFi connection to the se
 
 # Dependencies
 
+In my environment, I'm working on macOS, Ubuntu 26.04 LTS and Raspberry Pi OS with a PlutoSDR so my initial dependencies are: 
+
 Requires installed libraries
 
 ```aiignore
 sudo apt install libiio libiio-dev libad9361-0 libad9361-dev
 ```
 
-Requires soapy remote
+Above that I'm using the excellent library [SoapySDR](https://github.com/pothosware/SoapySDR).
 
-```aiignore
+I use both local SDR connection as well as experimenting with the soapy remote server.
+However, this project builds the soapysdr library along with soapyremote and the soapypluto module using FetchContent in cmake. 
+
+However the packages on linux are avalable using:
+
+```
 sudo apt install soapyremote-server soapysdr-tools
 ```
 
-# Building on ARM
+Additional dependencies built with FetchContent include:
 
-The dependencies for libiio need to be built on raspberry pi directly.
+- [vkFFT](https://github.com/DTolm/VkFFT) 
+- [nlohmann/json](https://github.com/nlohmann/json)
+- [ImGui](https://github.com/ocornut/imgui)
+- [CLI11](https://github.com/CLIUtils/CLI11.git)
 
-```aiignore
-sudo apt install cmake git build-essential libusb-1.0-0-dev libxml2-dev bison flex libsoapysdr-dev
+
+and on macOS
+
+- [SDL2](https://github.com/libsdl-org/SDL)
+
+A local thirdparty directory clones the submodule:
+[SDL2_gfx](https://github.com/giroletm/SDL2_gfx)
+
+## List of apt dependencies on Ubuntu and Debian
+
+```
+libsdl2-dev \
+libboost-program-options-dev \
+libsamplerate0-dev \
+# Bare-metal display driver dependencies for KMS/DRM
+libdrm-dev \
+libgbm-dev \
+# Embedded mobile GPU rendering layers for Mali chips
+libgles2-mesa-dev \
+libegl1-mesa-dev \
+# SDR integration
+libusb-dev \
+libiio0 \
+libiio-dev \
+libiio-utils \
+libad9361-0 \
+libad9361-dev \
+libavahi-core-dev \
+libvulkan-dev \
+vulkan-tools \
+glslang-dev \
+glslang-tools \
+glslc \
+mosquitto-dev libmosquitto-dev \
+libonnxruntime-dev \
+libliquid-dev \
+libfftw3-dev \
+```
+
+On Debian Trixie the onnx providers are distributed as part of the onnxruntime. However on Ubuntu 26.04 LTS a separate package is needed.
+```
+libonnxruntime-providers \
+```
+
+
+### Pluto SDR Links
+[PlutoSDR](https://wiki.analog.com/university/tools/pluto) is manufactured by [Analog Devices](https://github.com/analogdevicesinc)
+
+### Raspberry Pi Dependencies
+
+The script in docs/notes/raspberrypi_dependencies.sh provides a set of dependencies that can be deployed for runtime on the raspberry pi.
+
+```
+#!/bin/bash
+
+# dependencies for raspberry pi 6.18.50+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.18.50-1+rpt1 (2026-09-11) aarch64 GNU/Linux
+sudo apt update
+sudo apt install -y libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev
+sudo apt install libiio-dev libiio-utils libad9361-dev libad9361-0 iiod libiio0
+sudo apt install libvulkan-dev vulkan-tools
+sudo apt install glslang-dev glslang-tools glslc
+sudo apt install libonnxruntime-dev -y
+sudo apt install onnxruntime-tools libarmnnaclcommon33t64 libarmnn33t64 libarmnn-gpuacc-backend33 libarmnn-cpuacc-backend33 libarmnn-cpuref-backend33
+sudo apt-get install -y libvulkan-dev vulkan-tools glslang-dev glslang-tools glslc mosquitto-dev libmosquitto-dev libonnxruntime-dev libliquid-dev libfftw3-dev
+```
+
+### Building
+
+On linux and macOS the build can be performed with cmake.
+
+```
+cmake -B cmake-build-debug
+cmake --build cmake-build-debug --target all -j 8
+```
+
+On linux if using clang there is an optional build script:
+
+```
+#!/bin/bash
+
+rm -rf build_clang_amd64
+cmake -B build_clang_amd64 \
+-DCMAKE_TOOLCHAIN_FILE=clang_linux_amd64.toolchain.cmake \
+-DBoost_DIR=/usr/lib/x86_64-linux-gnu/cmake/Boost-1.83.0
+cmake --build build_clang_amd64
 
 ```
 
-After compiling dependencies 
-and installing the server it should be possible to confirm
-the SoapySDRUtil can find it:
+## Building for arm64
 
-```aiignore
-SoapySDRUtil --find "driver=plutosdr"
-```
+I found it convenient to use a docker image to build for arm64 from a x86_64 linux host.
+This requires that the ```qemu-user-binfmt``` are installed on the host.
 
-This should print out a list of interfaces.
-
-```aiignore
-
-Found device 0
-  device = plutosdr
-  driver = plutosdr
-  uri = ip:pluto.local
-
-Found device 1
-  device = plutosdr
-  driver = plutosdr
-  uri = local:
-
-Found device 2
-  device = plutosdr
-  driver = plutosdr
-  uri = usb:3.16.5
+The docker file is provided in ```Containerfile.arm64``` and the script:
 
 ```
-
-```aiignore
-SoapySDRUtil --probe="driver=plutosdr"
+build_clang_arm64.sh
 ```
 
-We configure the server to listen on port 1111
+Executes the build using ```podman``` the resulting build directory is ```build_emulated_arm64```.
 
-edit /
+Artifacts for arm64 can be copied into a build directory along with an install script for raspberry pi using the ```distro_arm.sh``` script.
 
-```aiignore
-sudo vi /etc/systemd/system/SoapySDRServer.service 
+Once copied into the home directory on the raspberry pi target, they can be installed with the ```build/arm64/install_arm.sh``` script.
+
+### Systemd services configuration
+
+
+There are three main systemd units in the ```service/services``` directory.
+
+- mosquitto.service
+  - uses a custom configuration to be copied below ```/etc/mosquitto/conf.d``` from the same directory.
+  - copy the mosquitto.service file into /etc/systemd/system and enable the service unit.
+  ```
+  sudo systemctl daemon-reload
+  sudo systemctl enable mosquitto.service
+  ```
+  
+- soapyremote-custom.service
+  - Assumes soapysdr server is installed in ```/usr/local/bin``` and loadable modules in ```/usr/local/lib/SoapySDR/modules/```
+- soapyremote-custom-arm.service
+  - assumes that the bundled soapy sdr server is deployed with the ```install_arm.sh``` script.
+
+### ONNX Classification Model File
+
+Classification models are developed in an external project. However the default model for testing is ```mod_dualbranch_tcn``` located in the ```resources``` folder of the project.
+
+Configuration files are used to define:
+
+- resources/class_map_v1.json
+  - the list of supported classes
+- resources/mod_dualbranch_tcn.json
+  - the model configuration and required parameters and preprocessing.
+
+For initial integration testing the default model will do. The configuration for this model is as follows:
+
 ```
-to search the remote server and see if it has access to the devices
-soapysrd util can be used.
-
-```aiignore
- SoapySDRUtil --find="driver=remote,remote=tcp://192.168.0.102:11111"
+{
+  "name": "mod_dualbranch_tcn",
+  "version": "001B_export",
+  "class_map_version": 1,
+  "onnx_file": "mod_dualbranch_tcn/001B_export/2026-10-25/model.onnx",
+  "sample_rate_hz": 6000,
+  "input_length": 2048,
+  "logits": true,
+  "input_transforms": ["downsample", "fft"]
+}
 ```
 
-Note the package soapyremote may need to be installed locally to allow access
-by soapysdr util to the soapy remote server.
+The above defines the path where the onnx file is found and configuration of the model based on the data it was trained on (from https://panoradio-sdr.de/radio-signal-classification-dataset/)
+
+This model was a coarse resolution model using training data sampled at only 6kHz with an input length of 2048 IQ samples. The model uses logits in its classification head, so probabilities are calculated by the application instead of the model.
+It uses two input transforms which are first a downsample transform and second an fft transform which operates on the downsampled data.
+
+Those inputs are then converted into a tensor of shape [1 x 4 x 2048] where the real and imaginary values of the downsampled IQ time domain and the FFT are each a single channel (the second dimension ).
+
+The ```class_map_v1.json``` file maps the indices of the [1 x num_classes] output. It is a simple mapping between class label and index position, and is used to translate between the index containing the maximum probability and the class label.
+
+```
+{
+  "version": 1,
+  "num_classes": 18,
+  "classes": {
+    "am": 0,
+    "dominoex11": 1,
+    "fax": 2,
+    "lsb": 3,
+    "morse": 4,
+    "mt63_1000": 5,
+    "navtex": 6,
+    "olivia16_1000": 7,
+    "olivia16_500": 8,
+    "olivia32_1000": 9,
+    "olivia8_250": 10,
+    "psk31": 11,
+    "psk63": 12,
+    "qpsk31": 13,
+    "rtty100_850": 14,
+    "rtty45_170": 15,
+    "rtty50_170": 16,
+    "usb": 17
+  }
+}
+```
 
 
-#### Contributing ####
+### Running the application
+
+On macOS a script to start mosquitto server for testing is provided in ```run_mosquitto_macos.sh```
+
+On raspberry pi the run script for the application is located in ```/opt/sdrcomms/bin/run_application_arm.sh```
+
+```
+#!/bin/bash
+
+export SOAPY_SDR_PLUGIN_PATH=/opt/sdrcomms/lib/modules/
+export SOAPY_LIB=/opt/sdrcomms/lib
+export LD_LIBRARY_PATH=$SOAPY_LIB:$SOAPY_SDR_PLUGIN_PATH:$LD_LIBRARY_PATH
+./application --server-uri=tcp://127.0.0.1:11111 \
+              --driver-name=remote \
+              --remote-driver=plutosdr \
+              --device-uri=ip:pluto.local \
+              --bind-address=127.0.0.1 \
+              --udp-server-address=0.0.0.0 \
+              --model-path=/opt/sdrcomms/resources \
+              --model-file=/opt/sdrcomms/resources/mod_dualbranch_tcn.json \
+              --class-map-file=/opt/sdrcomms/resources/class_map_v1.json
+
+```
+
+The application connects to a local soapysdr-remote server instance on port 1111. It passes through the bind address to soapysdr-remote. To export the UDP streaming server it listens on all interfaces 0.0.0.0 and uses port 45557 by default and will assume a local connection to mosquitto server on the localhost and default port 1883.
+
+### Running in macOS
+
+SoapySDR server was not used on macOS instead the soapy plut module was loaded directly from the soapysdr parameters. 
+
+### Running the sdrcommsui
+
+The sdrcommsui will connect to an already running instance of the application. It can be started with parameters for the server and port to connect to.
+
+```
+./sdrcommsui \
+--server-address \
+192.168.0.89 \
+--udp-stream-port \
+45557
+```
+
+### Contributing ###
 
 I joke that in the age of AI, people will only write source code for the same reason they whittle wooden spoons. So aside from googling and searching for example use cases and yes, asking google gemini for advice on how to use unfamiliar APIs, or even use those ancient papery things known as "books". This project is, more often than not, an example of a handmade code base. 
 
@@ -222,4 +402,4 @@ I joke that in the age of AI, people will only write source code for the same re
 
 Handprint by _RootOfAllLight, CC BY-SA 4.0, via Wikimedia Commons_
 
-For this project its fine to google and search for information about how to use apis, or get various hints on language usage, but for the most part, I'd prefer manual contributions. You can always fork the project and run wild with agents if you want to, in your own repos.
+For this project its fine to google and search for information about how to use apis, or get various hints on language usage, but for the most part, I'd prefer manual contributions. If you want to run wild with agents you can always "go fork your own repo".

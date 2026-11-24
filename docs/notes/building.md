@@ -1,7 +1,6 @@
 # Packaged Dependencies
 
 libsdl2-dev \
-libboost-program-options-dev \
 libsamplerate0-dev \
 # Bare-metal display driver dependencies for KMS/DRM
 libdrm-dev \
@@ -23,5 +22,8 @@ glslang-dev \
 glslang-tools \
 glslc \
 mosquitto-dev libmosquitto-dev \
-libonnxruntime-dev libonnxruntime-providers \
+libonnxruntime-dev \
+# on ubuntu
+libonnxruntime-providers \
 libliquid-dev \
+libfftw3-dev \
