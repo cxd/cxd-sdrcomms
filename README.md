@@ -46,7 +46,7 @@ This is a rich area of potential research, with many related problems to explore
 
 Many research articles focus primarily on the development of the model itself, and perhaps preprocessing. However integration of the model into a larger system is often overlooked. This is a non-trivial task, and one that provides an opportunity to investigate the practical challenges. 
 
-This project provides a shell for the exploring the integration challenges.
+This project provides a shell for the exploration of integration challenges.
 
 Overall the integration has been an exercise working out how to combine all of the pieces that would comprise a blind modulation classification system as well as testing on multiple platforms including raspberry pi (if anyone wants to supply a jetson nano, this would also be a target of interest).
 
