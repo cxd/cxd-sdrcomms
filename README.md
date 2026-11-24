@@ -399,7 +399,7 @@ The sdrcommsui will connect to an already running instance of the application. I
 
 ### Contributing ###
 
-I joke that in the age of AI, people will only write source code for the same reason they whittle wooden spoons. In this project, the extent of AI has been in searching or asking the google agent for examples of how to use unfamiliar APIs. Other that, there has been use of reference websites, and even occasional use of those ancient papery things known as "books". 
+I joke that in the age of AI, people will only write source code for the same reason they whittle wooden spoons. In this project, the extent of AI has been in searching or asking the google agent for examples of how to use unfamiliar API and especially cmake. Other that, there has been use of reference websites, and even occasional use of those ancient papery things known as "books". 
 
 ![Handmade](https://github.com/cxd/cxd-sdrcomms/raw/refs/heads/main/docs/assets/Handprint.png)
 
