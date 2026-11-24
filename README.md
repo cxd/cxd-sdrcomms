@@ -212,7 +212,9 @@ Note the package soapyremote may need to be installed locally to allow access
 by soapysdr util to the soapy remote server.
 
 
-#### This is a handmade project ####
+#### Contributing ####
+
+I joke that in the age of AI, people will only write source code for the same reason they whittle wooden spoons. So aside from googling, search for example use cases and yes, asking google gemini for advice on how to use unfamiliar APIs, this more often than not, an example of a handmade code base. For this project its fine to google and search for information about how to use apis, or get various hints on language usage, but for the most part, I'd prefer manual contributions. You can always fork the project and run wild with agents if you want to, in your own space.
 
 ![Handmade](https://github.com/cxd/cxd-sdrcomms/raw/refs/heads/main/docs/assets/Handprint.png)
 
