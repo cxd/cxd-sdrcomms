@@ -403,7 +403,7 @@ I joke that in the age of AI, people will only write source code for the same re
 
 ![Handmade](https://github.com/cxd/cxd-sdrcomms/raw/refs/heads/main/docs/assets/Handprint.png)
 
-Handprint by _RootOfAllLight, CC BY-SA 4.0, via Wikimedia Commons_
+Human Handprint by _RootOfAllLight, CC BY-SA 4.0, via Wikimedia Commons_
 
 For this project, if you'd like to contribute it'd be nice to avoid any kind of agent workflow for the time being. There's nothing stopping you doing it in your own copy of the repo.
 
