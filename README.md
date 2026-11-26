@@ -383,7 +383,7 @@ The application connects to a local soapysdr-remote server instance on port 1111
 
 ### Running in macOS
 
-SoapySDR server was not used on macOS instead the soapy plut module was loaded directly from the soapysdr parameters. 
+SoapySDR server was not used on macOS instead the soapy pluto sdr module was loaded directly from the soapysdr parameters. 
 
 ### Running the sdrcommsui
 
@@ -408,3 +408,5 @@ Human Handprint by _RootOfAllLight, CC BY-SA 4.0, via Wikimedia Commons_
 For this project, if you'd like to contribute it'd be nice to avoid any kind of agent workflow for the time being. There's nothing stopping you doing it in your own copy of the repo.
 
 However, there is plenty of work to explore in this area of application as mentioned earlier in this README. 
+
+
